@@ -1,16 +1,29 @@
 #!/usr/bin/env node
 
-const shell = require('shelljs')
 const program = require('commander')
   .version(require('../package').version)
   .usage('<command> [options]')
-shell.config.silent = true
 
 program
   .command('run')
   .description('start commandr daemon + api')
-  .action(() => {
-    console.log('will start on port 8000')
+  // .option('-p, --port <port>', 'Port', x => +x, 1111)
+  .action((options) => {
+    const fs = require('fs')
+    const os = require('os')
+    const path = require('path')
+    const { spawn } = require('child_process')
+    const pidpath = path.join(os.homedir(), '.commandr.pid')
+    const pid = fs.existsSync(pidpath) && fs.readFileSync(pidpath, 'utf8')
+    const running = pid => {
+      try { return process.kill(pid, 0) }
+      catch (e) { return e.code === 'EPERM' }
+    }
+    if (running(pid)) return console.log('commandr running', pid)
+    const child = spawn('node', ['api.js'], { detached: true, stdio: 'ignore' })
+    child.unref()
+    fs.writeFileSync(pidpath, child.pid)
+    console.log('commandr started', child.pid)
   })
 
 program.parse(process.argv)

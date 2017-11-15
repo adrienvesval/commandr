@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "commander": "~2",
+    "express": "~4",
     "shelljs": "~0.7"
   }
 }
