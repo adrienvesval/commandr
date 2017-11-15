@@ -1,0 +1,13 @@
+{
+  "name": "commandr",
+  "version": "0.0.1",
+  "description": "Command scheduler",
+  "preferGlobal": true,
+  "bin": {
+    "vmake": "bin/commandr"
+  },
+  "dependencies": {
+    "commander": "~2",
+    "shelljs": "~0.7"
+  }
+}
