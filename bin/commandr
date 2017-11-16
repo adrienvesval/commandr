@@ -7,24 +7,12 @@ const program = require('commander')
 program
   .command('start')
   .description('start commandr daemon + api')
-  .option('-p, --port <port>', 'Port', x => +x, 1111)
+  // .option('-p, --port <port>', 'Port', x => +x, 1111)
   .action((options) => {
-    const fs = require('fs')
-    const os = require('os')
-    const path = require('path')
-    const { spawn } = require('child_process')
-    const pidpath = path.join(os.homedir(), '.commandr', 'pid')
-    const pid = fs.existsSync(pidpath) && fs.readFileSync(pidpath, 'utf8')
-    const running = pid => {
-      try { return process.kill(pid, 0) }
-      catch (e) { return e.code === 'EPERM' }
-    }
-    if (running(pid)) return console.log('commandr running', pid, 'http://127.0.0.1:1111')
-    const child = spawn('node', ['api.js'], { detached: true, stdio: 'ignore' })
-    child.unref()
-    fs.existsSync(pidpath.replace('pid', '')) || fs.mkdirSync(pidpath.replace('pid', ''))
-    fs.writeFileSync(pidpath, child.pid)
-    console.log('commandr started', child.pid, 'http://127.0.0.1:1111')
+    const spwn = require('../spwn')
+    const { pid, running } = spwn()
+    if (running) return console.log('commandr running', pid, 'http://127.0.0.1:1111')
+    return console.log('commandr started', child.pid, 'http://127.0.0.1:1111')
   })
 
 program.parse(process.argv)

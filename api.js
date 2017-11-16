@@ -1,8 +1,10 @@
 const express = require('express')
 const app = express()
+const morgan = require('morgan')
 
 app.use(express.static('static'))
 app.use(express.json())
+app.use(morgan(':method :url :status :response-time ms - :date[iso]'))
 
 // TODO: Test on Windows
 // TODO: Use setTimeout to run next command
@@ -19,7 +21,7 @@ app.get('/api', (req, res) => {
 
 // Post new command
 app.post('/api', (req, res) => {
-  if (!req.body.id || !req.body.command || !req.body.schedule) return res.status(400).send('Invalid params')
+  if (!req.body.id || !req.body.command || !req.body.schedule || !/P(\d|T)/.test(req.body.schedule)) return res.status(400).send('Invalid params')
   if (commands[req.body.id]) return res.status(403).send('Command exists')
   commands[req.body.id] = req.body
   res.send('Command ID: ' + req.body.id)
@@ -33,3 +35,4 @@ app.delete('/api/:id', (req, res) => {
 })
 
 app.listen(1111)
+console.log('Starting commandr API on port 1111')

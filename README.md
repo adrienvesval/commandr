@@ -9,7 +9,7 @@ open http://127.0.0.1:1111
 ```
 
 ### Features
-- command add/delete/list
+- command add/del/list
 - command stats/logs
 - hook onerror/onsuccess
 - nice UI/UX > on http://127.0.0.1:1111

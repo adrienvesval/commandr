@@ -7,8 +7,9 @@
     "vmake": "bin/commandr"
   },
   "dependencies": {
+    "axios": "*",
     "commander": "~2",
     "express": "~4",
-    "shelljs": "~0.7"
+    "morgan": "~1.9"
   }
 }
