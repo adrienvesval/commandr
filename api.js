@@ -1,6 +1,7 @@
 const express = require('express')
 const app = express()
 const morgan = require('morgan')
+const commandr_spawn = require('./commandr_spawn')
 
 app.use(express.static('static'))
 app.use(express.json())
@@ -13,6 +14,23 @@ app.use(morgan(':method :url :status :response-time ms - :date[iso]'))
 // TODO: Automatically reload commands from file
 let timeout = null
 const commands = {}
+
+commands.echo = { id: 'echo', command: 'echo "toto"', schedule: 'PT10S' }
+setInterval(() => {
+  const command = commands.echo
+  const { pid, running, child } = commandr_spawn(command)
+  const start = new Date()
+  // console.log('command start', pid, command.id)
+  if (running) return console.log('command running', pid, command.id)
+  // child.on('close', code => console.log('command stopped', pid, command.id))
+  child.on('close', code => {
+    if (!commands.echo.stats) commands.echo.stats = []
+    commands.echo.stats.push({
+      start: start.toISOString(),
+      duration: new Date() - start,
+    })
+  })
+}, 1000)
 
 // List all commands and all stats
 app.get('/api', (req, res) => {

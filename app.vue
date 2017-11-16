@@ -35,8 +35,8 @@ em { font-style: normal;color: var(--primary); }
       <li v-for="command in commands">
         {{ command.id }} | {{ command.command }} | {{ command.schedule }}
         <button @click="del(command.id)">{{ t.del }}</button>
-        <ul v-for="log in command.logs || 3">
-          <li>LOG</li>
+        <ul v-for="stat in command.stats">
+          <li>{{ stat }}</li>
         </ul>
       </li>
     </ul>
@@ -47,7 +47,6 @@ em { font-style: normal;color: var(--primary); }
 <script>
 import axios from 'axios'
 const API = '//127.0.0.1:1337/127.0.0.1:1111/api/'
-window.axios = axios
 
 export default {
   data() {

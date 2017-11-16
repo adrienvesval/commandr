@@ -22,9 +22,9 @@ open http://127.0.0.1:1111
 
 ### API - CURL Exemple:
 ```bash
-curl -X POST -H 'Content-Type: application/json' 127.0.0.1:1111/api -d '{ "id": "command1", "command": "echo 1", "schedule": "PT10S" }'
+curl -X POST -H 'Content-Type: application/json' 127.0.0.1:1111/api -d '{ "id": "command1", "command": "echo 1", "schedule": "R/2017-11-17T00:00:00.000Z/PT10S" }'
 curl -X POST -H 'Content-Type: application/json' 127.0.0.1:1111/api -d '{ "id": "command2" }'
-curl -X POST -H 'Content-Type: application/json' 127.0.0.1:1111/api -d '{ "id": "command3", "command": "echo 1", "schedule": "PT10S" }'
+curl -X POST -H 'Content-Type: application/json' 127.0.0.1:1111/api -d '{ "id": "command3", "command": "echo 1", "schedule": "R/2017-11-17T00:00:00.000Z/PT10S" }'
 curl -X GET 127.0.0.1:1111/api
 curl -X DELETE 127.0.0.1:1111/api/command3
 ```
