@@ -6,13 +6,13 @@ const program = require('commander')
 
 program
   .command('start')
-  .description('start commandr daemon + api')
+  .description('start command-r daemon + api')
   // .option('-p, --port <port>', 'Port', x => +x, 1111)
   .action((options) => {
-    const commandr_spawn = require('../commandr_spawn')
-    const { pid, running } = commandr_spawn()
-    if (running) return console.log('commandr running', pid, 'http://127.0.0.1:1111')
-    return console.log('commandr started', pid, 'http://127.0.0.1:1111')
+    const cmdspawn = require('../cmdspawn')
+    const { pid, running } = cmdspawn()
+    if (running) return console.log('command-r running', pid, 'http://127.0.0.1:1111')
+    return console.log('command-r started', pid, 'http://127.0.0.1:1111')
   })
 
 program.parse(process.argv)

@@ -3,8 +3,8 @@
 
 ### Usage
 ```bash
-npm install -g commandr
-commandr start
+npm install -g command-r
+command-r start
 open http://127.0.0.1:1111
 ```
 

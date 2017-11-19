@@ -1,10 +1,10 @@
 {
-  "name": "commandr",
+  "name": "command-r",
   "version": "0.0.1",
   "description": "Command scheduler",
   "preferGlobal": true,
   "bin": {
-    "vmake": "bin/commandr"
+    "vmake": "bin/command-r"
   },
   "dependencies": {
     "axios": "*",

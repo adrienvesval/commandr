@@ -8,14 +8,14 @@ const running = pid => {
   catch (e) { return e.code === 'EPERM' }
 }
 
-const commandr_spawn = command => {
-  fs.existsSync(path.join(os.homedir(), '.commandr')) || fs.mkdirSync(path.join(os.homedir(), '.commandr'))
-  fs.existsSync(path.join(os.homedir(), '.commandr', 'commands')) || fs.mkdirSync(path.join(os.homedir(), '.commandr', 'commands'))
-  let pidpath = path.join(os.homedir(), '.commandr', 'commandr.pid')
+const cmdspawn = command => {
+  fs.existsSync(path.join(os.homedir(), '.command-r')) || fs.mkdirSync(path.join(os.homedir(), '.command-r'))
+  fs.existsSync(path.join(os.homedir(), '.command-r', 'commands')) || fs.mkdirSync(path.join(os.homedir(), '.command-r', 'commands'))
+  let pidpath = path.join(os.homedir(), '.command-r', 'command-r.pid')
   let program = 'node'
   let args = ['api.js']
   if (command) {
-    pidpath = path.join(os.homedir(), '.commandr', 'commands', command.id + '.pid')
+    pidpath = path.join(os.homedir(), '.command-r', 'commands', command.id + '.pid')
     program = command.command.split(' ')[0]
     args = command.command.split(' ').slice(1)
   }
@@ -31,4 +31,4 @@ const commandr_spawn = command => {
   return { pid: child.pid, running: false, child }
 }
 
-module.exports = commandr_spawn
+module.exports = cmdspawn

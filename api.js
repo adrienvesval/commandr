@@ -1,7 +1,7 @@
 const express = require('express')
 const app = express()
 const morgan = require('morgan')
-const commandr_spawn = require('./commandr_spawn')
+const cmdspawn = require('./cmdspawn')
 
 app.use(express.static('static'))
 app.use(express.json())
@@ -18,7 +18,7 @@ const commands = {}
 commands.echo = { id: 'echo', command: 'echo "toto"', schedule: 'PT10S' }
 setInterval(() => {
   const command = commands.echo
-  const { pid, running, child } = commandr_spawn(command)
+  const { pid, running, child } = cmdspawn(command)
   const start = new Date()
   // console.log('command start', pid, command.id)
   if (running) return console.log('command running', pid, command.id)
@@ -53,4 +53,4 @@ app.delete('/api/:id', (req, res) => {
 })
 
 app.listen(1111)
-console.log('Starting commandr API on port 1111')
+console.log('Starting command-r API on port 1111')
