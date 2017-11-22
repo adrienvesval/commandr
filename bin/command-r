@@ -9,9 +9,9 @@ program
   .description('start command-r daemon + api')
   // .option('-p, --port <port>', 'Port', x => +x, 1111)
   .action((options) => {
-    const cmdspawn = require('../cmdspawn')
-    const { pid, running } = cmdspawn()
-    if (running) return console.log('command-r running', pid, 'http://127.0.0.1:1111')
+    const { spawn } = require('child_process')
+    const child = spawn('node', ['api.js'], { detached: true, stdio: ['ignore', 'ignore', 'ignore'] })
+    child.unref()
     return console.log('command-r started', pid, 'http://127.0.0.1:1111')
   })
 

@@ -1,36 +1,77 @@
 const express = require('express')
 const app = express()
 const morgan = require('morgan')
-const cmdspawn = require('./cmdspawn')
 
 app.use(express.static('static'))
 app.use(express.json())
 app.use(morgan(':method :url :status :response-time ms - :date[iso]'))
 
 // TODO: Test on Windows
-// TODO: Use setTimeout to run next command
-// TODO: Use Proxy to automatically reset then set next timeout
-// TODO: Use Proxy to automatically save "commands" state to ~/.commander/commands.json
-// TODO: Automatically reload commands from file
-let timeout = null
-const commands = {}
+// Use setTimeout to run next command
+// Use Proxy to automatically reset then set next timeout
+// Use Proxy to automatically save "commands" state to ~/.commander/commands.json
+// Automatically reload commands from json file
+const fs = require('fs')
+const os = require('os')
+const path = require('path')
+const { spawn } = require('child_process')
+const cmdpath = path.join(os.homedir(), '.command-r', 'commands.json')
+const running = pid => {
+  if (!pid) return false
+  try { return process.kill(pid, 0) }
+  catch (e) { return e.code === 'EPERM' }
+}
 
-commands.echo = { id: 'echo', command: 'echo "toto"', schedule: 'PT10S' }
-setInterval(() => {
-  const command = commands.echo
-  const { pid, running, child } = cmdspawn(command)
-  const start = new Date()
-  // console.log('command start', pid, command.id)
-  if (running) return console.log('command running', pid, command.id)
-  // child.on('close', code => console.log('command stopped', pid, command.id))
-  child.on('close', code => {
-    if (!commands.echo.stats) commands.echo.stats = []
-    commands.echo.stats.push({
-      start: start.toISOString(),
-      duration: new Date() - start,
+let timeout = null
+const commands = new Proxy(fs.existsSync(cmdpath) ? require(cmdpath) : {}, {
+  set: (obj, key, value) => {
+    if (obj[key]) return false
+    obj[key] = value
+    fs.writeFileSync(cmdpath, JSON.stringify(obj))
+    update_timer()
+    return true
+  },
+  deleteProperty: function (obj, key) {
+    if (!obj[key]) return false
+    delete obj[key]
+    fs.writeFileSync(cmdpath, JSON.stringify(obj))
+    update_timer()
+    return true
+  },
+})
+const update_timer = () => {
+  clearTimeout(timeout)
+
+  let next = null
+  for (var command in commands) {
+    if (commands.hasOwnProperty(command)) {
+      if (!next || command.schedule > next.schedule) next = commands[command]
+    }
+  }
+
+  if (!next) return
+  timeout = setTimeout(() => {
+    if (running(next.command.id)) return console.log('Command still running !!')
+
+    const program = next.command.split(' ')[0]
+    const args = next.command.split(' ').slice(1)
+    const child = spawn(program, args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
+    child.unref()
+    next.command.id = child.pid
+    if (!next.stats) next.stats = []
+    const start = new Date()
+    const stat = { start: start.toISOString() }
+    child.stdout.on('data', data => stat.stdout = data.toString())
+    child.stderr.on('data', data => stat.stderr = data.toString())
+    child.on('close', code => {
+      stat.duration = new Date() - start
+      next.stats.push(stat)
     })
-  })
-}, 1000)
+
+    update_timer()
+  }, 1000)
+}
+update_timer()
 
 // List all commands and all stats
 app.get('/api', (req, res) => {
