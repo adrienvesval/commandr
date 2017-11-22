@@ -35,8 +35,8 @@ em { font-style: normal;color: var(--primary); }
       <li v-for="command in commands">
         {{ command.id }} | {{ command.command }} | {{ command.schedule }}
         <button @click="del(command.id)">{{ t.del }}</button>
-        <ul v-for="stat in command.stats">
-          <li>{{ stat }}</li>
+        <ul v-for="run in command.runs">
+          <li>{{ run }}</li>
         </ul>
       </li>
     </ul>
@@ -73,18 +73,14 @@ export default {
   },
   methods: {
     list() {
-      axios.get(API)
-        .then(res => this.commands = res.data)
+      axios.get(API).then(res => this.commands = res.data)
     },
     add(form) {
-      const data = Array.from(new FormData(form))
-        .reduce((acc, v) => { acc[v[0]] = v[1];return acc }, {})
-      axios.post(API, data)
-        .then(this.list)
+      const data = Array.from(new FormData(form)).reduce((acc, v) => { acc[v[0]] = v[1];return acc }, {})
+      axios.post(API, data).then(this.list)
     },
     del(id) {
-      axios.delete(API + id)
-        .then(this.list)
+      axios.delete(API + id).then(this.list)
     },
   }
 }

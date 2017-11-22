@@ -1,6 +1,12 @@
 # Commandr
 > Command scheduler
 
+### Features
+- command add/del/list
+- command stats/logs
+- hook onerror/onsuccess
+- nice UI/UX > on http://127.0.0.1:1111
+
 ### Usage
 ```bash
 npm install -g command-r
@@ -8,11 +14,13 @@ command-r start
 open http://127.0.0.1:1111
 ```
 
-### Features
-- command add/del/list
-- command stats/logs
-- hook onerror/onsuccess
-- nice UI/UX > on http://127.0.0.1:1111
+### Extended Usage:
+```bash
+commandr # > display short help + status
+commandr -h # > display full help
+commandr [cmd] -h # display command help
+commandr start/stop/status
+```
 
 ### Plugins
 - commandr-notify > Core?
@@ -38,12 +46,13 @@ curl -X DELETE 127.0.0.1:1111/api/command3
   > PT10S === R/tonight/PT10S === Every 10sec starting from tonight 0AM
   > R20/2017-11-14T19:25/PT10S === Every 10sec starting from 14 Nov 2017, repeat 20 times then stop
 
-### Extended Usage:
+### DEV
 ```bash
-commandr # > display short help + status
-commandr -h # > display full help
-commandr [cmd] -h # display command help
-commandr start/stop/status
+# Build app - DEV
+vue build app.vue # 127.0.0.1:4000
+corsproxy # + change API const to '//127.0.0.1:1337/127.0.0.1:1111'
+# Build app - PROD (pre-commit)
+vue build app.vue --prod --disable-compress && cp app.html dist/app.html && cd dist/ && ls *.js | xargs -I '{}' sed -i '' 's/<<<JS>>>/{}/g' app.html && ls *.css | xargs -I '{}' sed -i '' 's/<<<CSS>>>/{}/g' app.html && inliner --nosvg -mni app.html > index.html && cp index.html ../static/index.html && cd .. && rm -rf dist
 ```
 
 ### Inspiration

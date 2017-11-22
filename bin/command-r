@@ -9,10 +9,14 @@ program
   .description('start command-r daemon + api')
   // .option('-p, --port <port>', 'Port', x => +x, 1111)
   .action((options) => {
+    const fs = require('fs')
+    const os = require('os')
+    const path = require('path')
     const { spawn } = require('child_process')
     const child = spawn('node', ['api.js'], { detached: true, stdio: ['ignore', 'ignore', 'ignore'] })
     child.unref()
-    return console.log('command-r started', pid, 'http://127.0.0.1:1111')
+    fs.writeFileSync(path.join(os.homedir(), '.commandr.pid'), child.pid)
+    return console.log('command-r started - http://127.0.0.1:1111')
   })
 
 program.parse(process.argv)

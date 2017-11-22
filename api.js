@@ -15,7 +15,7 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 const { spawn } = require('child_process')
-const cmdpath = path.join(os.homedir(), '.command-r', 'commands.json')
+const cmdpath = path.join(os.homedir(), '.commandr.json')
 const running = pid => {
   if (!pid) return false
   try { return process.kill(pid, 0) }
@@ -58,14 +58,14 @@ const update_timer = () => {
     const child = spawn(program, args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
     child.unref()
     next.command.id = child.pid
-    if (!next.stats) next.stats = []
+    if (!next.runs) next.runs = []
     const start = new Date()
     const stat = { start: start.toISOString() }
     child.stdout.on('data', data => stat.stdout = data.toString())
     child.stderr.on('data', data => stat.stderr = data.toString())
     child.on('close', code => {
       stat.duration = new Date() - start
-      next.stats.push(stat)
+      next.runs.push(stat)
     })
 
     update_timer()
@@ -73,7 +73,7 @@ const update_timer = () => {
 }
 update_timer()
 
-// List all commands and all stats
+// List all commands and all runs
 app.get('/api', (req, res) => {
   res.send(commands)
 })
