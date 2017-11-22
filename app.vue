@@ -46,7 +46,7 @@ em { font-style: normal;color: var(--primary); }
 
 <script>
 import axios from 'axios'
-const API = '//127.0.0.1:1337/127.0.0.1:1111/api/'
+const API = '/api/'
 
 export default {
   data() {
