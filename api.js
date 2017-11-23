@@ -36,7 +36,8 @@ const commands = new Proxy(fs.existsSync(cmdpath) ? require(cmdpath) : {}, {
     return true
   },
 })
-const schedule2next = schedule => {
+const next = cmd => {
+  const schedule = cmd.schedule
   if (!schedule) return null
   let t = {
     // TODO: handle year/month
@@ -50,47 +51,51 @@ const schedule2next = schedule => {
   let [repeat, date, period] = schedule.split('/')
   repeat = repeat.slice(1) === '' ? Infinity : +repeat.slice(1)
   date = new Date(date)
-  period = period.replace(/(P|T)/g, '').match(/\d*[A-Z]/g).map(p => +p.slice(0, -1) * t[p.slice(1)]).sum()
+  period = period.replace(/(P|T)/g, '').match(/\d*[A-Z]/g).map(p => +p.slice(0, -1) * t[p.slice(-1)]).sum()
 
   if (!repeat || !date || !period) return null
   if (+date > +new Date()) return date
   const num = (new Date() - date) / period
-  if (num > repeat) return null
-  return new Date(+date + (Math.ceil(num) * period))
+  if (num > repeat - 1) return null
+
+  cmd.nextrun = new Date(+date + (Math.ceil(num) * period))
+  if (cmd.skip) cmd.nextrun = cmd.nextrun + period
+  return cmd
+}
+const run = cmd => {
+  delete cmd.skip
+  if (!cmd.runs) cmd.runs = []
+  const program = cmd.command.split(' ')[0]
+  const args = cmd.command.split(' ').slice(1)
+  const child = spawn(program, args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
+  child.unref()
+  const start = new Date()
+  cmd.run = { start: start.toISOString(), pid: child.pid }
+  child.stdout.on('data', data => cmd.run.stdout = data.toString())
+  child.stderr.on('data', data => cmd.run.stderr = data.toString())
+  child.on('close', code => {
+    cmd.run.duration = new Date() - start
+    cmd.runs.push(cmd.run)
+    delete cmd.run
+    update_timer()
+  })
+  child.on('error', err => {
+    cmd.run.duration = new Date() - start
+    cmd.run.error = err
+    cmd.runs.push(cmd.run)
+    delete cmd.run
+    update_timer()
+  })
 }
 const update_timer = () => {
   clearTimeout(timeout)
-
-  commands.map(c => c.nextrun = schedule2next(c.schedule))
+  commands.map(next)
   const cmd = commands[commands.filter(c => c.nextrun).min('nextrun')]
-
   if (!cmd) return
   timeout = setTimeout(() => {
     update_timer()
-    if (!cmd.runs) cmd.runs = []
     if (cmd.run && running(cmd.run.pid)) return console.error('Command was scheduled but is still running', cmd)
-
-    const program = cmd.command.split(' ')[0]
-    const args = cmd.command.split(' ').slice(1)
-    const child = spawn(program, args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
-    child.unref()
-    const start = new Date()
-    cmd.run = { start: start.toISOString(), pid: child.pid }
-    child.stdout.on('data', data => cmd.run.stdout = data.toString())
-    child.stderr.on('data', data => cmd.run.stderr = data.toString())
-    child.on('close', code => {
-      cmd.run.duration = new Date() - start
-      cmd.runs.push(cmd.run)
-      delete cmd.run
-      update_timer()
-    })
-    child.on('error', err => {
-      cmd.run.duration = new Date() - start
-      cmd.run.error = err
-      cmd.runs.push(cmd.run)
-      delete cmd.run
-      update_timer()
-    })
+    run(cmd)
   }, cmd.nextrun - new Date())
 }
 update_timer()
@@ -102,16 +107,31 @@ app.get('/api', (req, res) => {
 
 // Post new command
 app.post('/api', (req, res) => {
-  if (!req.body.id || !req.body.command) return res.status(400).send('Command or ID not specified')
-  if (commands[req.body.id]) return res.status(403).send('Command already exists')
-  commands[req.body.id] = req.body
-  res.send('Command ID: ' + req.body.id)
+  if (!req.body.command) return res.status(400).send('Command not specified')
+  const id = 'c' + new Date().toISOString()
+  const { command, schedule } = req.body
+  commands[id] = { id, command, schedule }
+  res.send('Command ID: ' + id)
 })
 
 // Delete specific command
 app.delete('/api/:id', (req, res) => {
-  if (commands[req.body.id]) return res.status(404).send('Command not found')
+  if (!commands[req.params.id]) return res.status(404).send('Command not found')
   delete commands[req.params.id]
+  res.send('OK')
+})
+
+// Run specific command
+app.get('/api/:id/run', (req, res) => {
+  if (!commands[req.params.id]) return res.status(404).send('Command not found')
+  run(commands[req.params.id])
+  res.send('OK')
+})
+
+// Skip specific command
+app.get('/api/:id/skip', (req, res) => {
+  if (!commands[req.params.id]) return res.status(404).send('Command not found')
+  commands[req.params.id].skip = true
   res.send('OK')
 })
 

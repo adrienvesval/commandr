@@ -100,7 +100,7 @@ export default {
   },
   mounted() {
     setInterval(() => {
-      if (!this.time) return
+      if (!this.time) return this.diff = 0
       this.diff = Math.abs((new Date(this.time) - new Date()) / 1000)
       if (Math.trunc(this.diff) === 0) this.$emit('time')
     }, 1000)

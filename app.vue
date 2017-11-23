@@ -5,7 +5,7 @@ html { font-family: Lato; }
 body { font-size: 1.4rem; }
 h1 { font-size: 2em;line-height: 1.33;text-align: center; }
 em { font-style: normal;color: var(--primary); }
-.running { color: hotpink }
+.running { background: var(--highlight); }
 @media (min-width: 1000px){
   section, header, footer { max-width: 900px; }
   body { font-size: 1.6rem; }
@@ -21,19 +21,13 @@ em { font-style: normal;color: var(--primary); }
   <section>
     <form @submit.prevent="add($event.target)">
       <label>
-        {{ t.id }}
-        <input type="text" name="id"></input>
-      </label>
-      <label>
         {{ t.command }}
         <input type="text" name="command"></input>
       </label>
       <label>
         {{ t.schedule }}
-        <input type="text" name="schedule"></input>
-        <!-- <input type="number" name="repeat"></input>
-        <input type="datetime" name="start"></input>
-        <input type="text" name="period"></input> -->
+        {{ t.at }} <input type="time" name="start" value="00:00"></input>
+        {{ t.every }} <input type="number" name="hours" value="24"></input> {{ t.hours }}
       </label>
       <button>{{ t.add }}</button>
     </form>
@@ -41,15 +35,16 @@ em { font-style: normal;color: var(--primary); }
   <section>
     <div># of Cmd: {{ commands.values().length }}</div>
     <div># of Cmd Running: {{ running }}</div>
-    <div>Next Run: <timer :time="nextrun" @time="list"></timer></div>
+    <div><span>Next Run in: </span><timer :time="nextrun" @time="list"></timer></div>
   </section>
   <section>
     <ul>
       <li v-for="command in commands" :class="{ running: command.run }">
-        {{ command.id }} | {{ command.command }} | {{ command.nextrun }}
+        <span>{{ command.id }} | {{ command.command }}</span>
         <button @click="run(command.id)">{{ t.run }}</button>
-        <button @click="skip(command.id)">{{ t.skip }}</button>
         <button @click="del(command.id)">{{ t.del }}</button>
+        <span v-if="command.run">{{ t.running }}: <timer :time="command.run.start"></timer></span>
+        <span v-if="command.nextrun">{{ t.nextrun }}: <timer :time="command.nextrun"></timer></span>
         <ul v-for="run in command.runs">
           <li>{{ run }}</li>
         </ul>
@@ -80,6 +75,11 @@ export default {
           id: "ID",
           command: "Command",
           schedule: "Schedule",
+          at: "AT",
+          every: "EVERY",
+          hours: "HOURS",
+          running: "Running Since",
+          nextrun: "Next Run in",
           add: "ADD",
           run: "RUN",
           skip: "SKIP",
@@ -104,8 +104,17 @@ export default {
       axios.get(API).then(res => this.commands = res.data)
     },
     add(form) {
-      const data = Array.from(new FormData(form)).reduce((acc, v) => { acc[v[0]] = v[1];return acc }, {})
+      const data = {
+        command: form.command.value,
+        schedule: form.hours.value && ['R', new Date(new Date().iso().slice(0, 11) + form.start.value).iso().replace(/\.\d{3}/, ''), 'PT' + form.hours.value + 'H'].join('/'),
+      }
       axios.post(API, data).then(this.list)
+    },
+    run(id) {
+      axios.get(API + id + '/run').then(this.list)
+    },
+    skip(id) {
+      axios.get(API + id + '/skip').then(this.list)
     },
     del(id) {
       axios.delete(API + id).then(this.list)
