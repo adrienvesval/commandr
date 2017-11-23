@@ -6,11 +6,7 @@ app.use(express.static('static'))
 app.use(express.json())
 app.use(morgan(':method :url :status :response-time ms - :date[iso]'))
 
-// TODO: Test on Windows
-// Use setTimeout to run next command
-// Use Proxy to automatically reset then set next timeout
-// Use Proxy to automatically save "commands" state to ~/.commander/commands.json
-// Automatically reload commands from json file
+const Sugar = require('sugar')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
@@ -21,6 +17,7 @@ const running = pid => {
   try { return process.kill(pid, 0) }
   catch (e) { return e.code === 'EPERM' }
 }
+Sugar.extend({ objectPrototype: true })
 
 let timeout = null
 const commands = new Proxy(fs.existsSync(cmdpath) ? require(cmdpath) : {}, {
@@ -39,37 +36,62 @@ const commands = new Proxy(fs.existsSync(cmdpath) ? require(cmdpath) : {}, {
     return true
   },
 })
+const schedule2next = schedule => {
+  if (!schedule) return null
+  let t = {
+    // TODO: handle year/month
+    // Y: 365.25
+    // M: 30.6
+    D: 24 * 60 * 60 * 1000,
+    H: 60 * 60 * 1000,
+    M: 60 * 1000,
+    S: 1000,
+  }
+  let [repeat, date, period] = schedule.split('/')
+  repeat = repeat.slice(1) === '' ? Infinity : +repeat.slice(1)
+  date = new Date(date)
+  period = period.replace(/(P|T)/g, '').match(/\d*[A-Z]/g).map(p => +p.slice(0, -1) * t[p.slice(1)]).sum()
+
+  if (!repeat || !date || !period) return null
+  if (+date > +new Date()) return date
+  const num = (new Date() - date) / period
+  if (num > repeat) return null
+  return new Date(+date + (Math.ceil(num) * period))
+}
 const update_timer = () => {
   clearTimeout(timeout)
 
-  let next = null
-  for (var command in commands) {
-    if (commands.hasOwnProperty(command)) {
-      if (!next || command.schedule > next.schedule) next = commands[command]
-    }
-  }
+  commands.map(c => c.nextrun = schedule2next(c.schedule))
+  const cmd = commands[commands.filter(c => c.nextrun).min('nextrun')]
 
-  if (!next) return
+  if (!cmd) return
   timeout = setTimeout(() => {
-    if (running(next.command.id)) return console.log('Command still running !!')
+    update_timer()
+    if (!cmd.runs) cmd.runs = []
+    if (cmd.run && running(cmd.run.pid)) return console.error('Command was scheduled but is still running', cmd)
 
-    const program = next.command.split(' ')[0]
-    const args = next.command.split(' ').slice(1)
+    const program = cmd.command.split(' ')[0]
+    const args = cmd.command.split(' ').slice(1)
     const child = spawn(program, args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
     child.unref()
-    next.command.id = child.pid
-    if (!next.runs) next.runs = []
     const start = new Date()
-    const stat = { start: start.toISOString() }
-    child.stdout.on('data', data => stat.stdout = data.toString())
-    child.stderr.on('data', data => stat.stderr = data.toString())
+    cmd.run = { start: start.toISOString(), pid: child.pid }
+    child.stdout.on('data', data => cmd.run.stdout = data.toString())
+    child.stderr.on('data', data => cmd.run.stderr = data.toString())
     child.on('close', code => {
-      stat.duration = new Date() - start
-      next.runs.push(stat)
+      cmd.run.duration = new Date() - start
+      cmd.runs.push(cmd.run)
+      delete cmd.run
+      update_timer()
     })
-
-    update_timer()
-  }, 1000)
+    child.on('error', err => {
+      cmd.run.duration = new Date() - start
+      cmd.run.error = err
+      cmd.runs.push(cmd.run)
+      delete cmd.run
+      update_timer()
+    })
+  }, cmd.nextrun - new Date())
 }
 update_timer()
 
@@ -80,8 +102,8 @@ app.get('/api', (req, res) => {
 
 // Post new command
 app.post('/api', (req, res) => {
-  if (!req.body.id || !req.body.command || !req.body.schedule || !/P(\d|T)/.test(req.body.schedule)) return res.status(400).send('Invalid params')
-  if (commands[req.body.id]) return res.status(403).send('Command exists')
+  if (!req.body.id || !req.body.command) return res.status(400).send('Command or ID not specified')
+  if (commands[req.body.id]) return res.status(403).send('Command already exists')
   commands[req.body.id] = req.body
   res.send('Command ID: ' + req.body.id)
 })

@@ -5,6 +5,7 @@ html { font-family: Lato; }
 body { font-size: 1.4rem; }
 h1 { font-size: 2em;line-height: 1.33;text-align: center; }
 em { font-style: normal;color: var(--primary); }
+.running { color: hotpink }
 @media (min-width: 1000px){
   section, header, footer { max-width: 900px; }
   body { font-size: 1.6rem; }
@@ -16,6 +17,8 @@ em { font-style: normal;color: var(--primary); }
 <main>
   <section>
     <h1 v-html="t.project"></h1>
+  </section>
+  <section>
     <form @submit.prevent="add($event.target)">
       <label>
         {{ t.id }}
@@ -28,12 +31,24 @@ em { font-style: normal;color: var(--primary); }
       <label>
         {{ t.schedule }}
         <input type="text" name="schedule"></input>
+        <!-- <input type="number" name="repeat"></input>
+        <input type="datetime" name="start"></input>
+        <input type="text" name="period"></input> -->
       </label>
       <button>{{ t.add }}</button>
     </form>
+  </section>
+  <section>
+    <div># of Cmd: {{ commands.values().length }}</div>
+    <div># of Cmd Running: {{ running }}</div>
+    <div>Next Run: <timer :time="nextrun" @time="list"></timer></div>
+  </section>
+  <section>
     <ul>
-      <li v-for="command in commands">
-        {{ command.id }} | {{ command.command }} | {{ command.schedule }}
+      <li v-for="command in commands" :class="{ running: command.run }">
+        {{ command.id }} | {{ command.command }} | {{ command.nextrun }}
+        <button @click="run(command.id)">{{ t.run }}</button>
+        <button @click="skip(command.id)">{{ t.skip }}</button>
         <button @click="del(command.id)">{{ t.del }}</button>
         <ul v-for="run in command.runs">
           <li>{{ run }}</li>
@@ -46,9 +61,14 @@ em { font-style: normal;color: var(--primary); }
 
 <script>
 import axios from 'axios'
-const API = '/api/'
+import Sugar from 'sugar'
+import Timer from './Timer.vue'
+Sugar.extend({ objectPrototype: true })
+// const API = '/api/'
+const API = '//127.0.0.1:1337/127.0.0.1:1111/api/'
 
 export default {
+  components: { Timer },
   data() {
     this.list()
     return {
@@ -61,6 +81,8 @@ export default {
           command: "Command",
           schedule: "Schedule",
           add: "ADD",
+          run: "RUN",
+          skip: "SKIP",
           del: "DELETE",
         }
       }
@@ -69,6 +91,12 @@ export default {
   computed: {
     t() {
       return this.translation[this.lang] || {}
+    },
+    nextrun() {
+      return this.commands.values().map('nextrun').filter(d => d).min()
+    },
+    running() {
+      return this.commands.reduce((acc, v) => acc + !!v.run, 0)
     },
   },
   methods: {
@@ -82,6 +110,12 @@ export default {
     del(id) {
       axios.delete(API + id).then(this.list)
     },
+  },
+  mounted() {
+    setInterval(() => {
+      if (!this.running) return
+      this.list()
+    }, 1000)
   }
 }
 </script>

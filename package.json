@@ -10,6 +10,7 @@
     "axios": "*",
     "commander": "~2",
     "express": "~4",
-    "morgan": "~1.9"
+    "morgan": "~1.9",
+    "sugar": "~2"
   }
 }
