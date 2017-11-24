@@ -22,13 +22,28 @@ em { font-style: normal;color: var(--primary); }
     <form @submit.prevent="add($event.target)">
       <label>
         {{ t.command }}
-        <input type="text" name="command"></input>
+        <input type="text" name="command" required></input>
       </label>
-      <label>
+      <br>
+      <label>*
         {{ t.schedule }}
         {{ t.at }} <input type="time" name="start" value="00:00"></input>
-        {{ t.every }} <input type="number" name="hours" value="24"></input> {{ t.hours }}
       </label>
+      <label>
+        {{ t.every }} <input type="number" name="hours"></input> {{ t.hours }}
+      </label>
+      <br>
+      <label>*
+        {{ t.email }} <input type="email" name="email" :value="commands.values().map('email').filter(x => x).most()"></input>
+      </label>
+      <br>
+      <label>*
+        {{ t.onsuccess }} <select name="onsuccess">
+          <option></option>
+          <option :value="command.id" v-for="command in commands">{{ command.command }}</option>
+        </select>
+      </label>
+      <br>
       <button>{{ t.add }}</button>
     </form>
   </section>
@@ -75,12 +90,14 @@ export default {
           id: "ID",
           command: "Command",
           schedule: "Schedule",
-          at: "AT",
-          every: "EVERY",
-          hours: "HOURS",
+          at: "at",
+          every: "Every",
+          hours: "Hours",
+          email: "Email",
+          onsuccess: "On success",
           running: "Running Since",
           nextrun: "Next Run in",
-          add: "ADD",
+          add: "SCHEDULE",
           run: "RUN",
           skip: "SKIP",
           del: "DELETE",
@@ -107,6 +124,8 @@ export default {
       const data = {
         command: form.command.value,
         schedule: form.hours.value && ['R', new Date(new Date().iso().slice(0, 11) + form.start.value).iso().replace(/\.\d{3}/, ''), 'PT' + form.hours.value + 'H'].join('/'),
+        email: form.email.value,
+        onsuccess: form.onsuccess.value,
       }
       axios.post(API, data).then(this.list)
     },

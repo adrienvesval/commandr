@@ -65,24 +65,22 @@ const next = cmd => {
 const run = cmd => {
   delete cmd.skip
   if (!cmd.runs) cmd.runs = []
+  if (!cmd.onsuccess) cmd.onsuccess = console.log
+  if (!cmd.onerror) cmd.onerror = console.error
+  const start = new Date()
   const program = cmd.command.split(' ')[0]
   const args = cmd.command.split(' ').slice(1)
   const child = spawn(program, args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
   child.unref()
-  const start = new Date()
   cmd.run = { start: start.toISOString(), pid: child.pid }
   child.stdout.on('data', data => cmd.run.stdout = data.toString())
   child.stderr.on('data', data => cmd.run.stderr = data.toString())
+  child.on('error', err => cmd.run.err = err)
   child.on('close', code => {
     cmd.run.duration = new Date() - start
     cmd.runs.push(cmd.run)
-    delete cmd.run
-    update_timer()
-  })
-  child.on('error', err => {
-    cmd.run.duration = new Date() - start
-    cmd.run.error = err
-    cmd.runs.push(cmd.run)
+    if (code !== 0 || cmd.run.err || cmd.run.stderr) cmd.onerror(cmd)
+    else cmd.onsuccess(cmd)
     delete cmd.run
     update_timer()
   })
@@ -107,7 +105,8 @@ app.get('/api', (req, res) => {
 
 // Post new command
 app.post('/api', (req, res) => {
-  if (!req.body.command) return res.status(400).send('Command not specified')
+  if (!/127.0.0.1/.test(req.ip)) return res.status(401).send('unauthorized_remote_action')
+  if (!req.body.command) return res.status(400).send('command_not_specified')
   const id = 'c' + new Date().toISOString()
   const { command, schedule } = req.body
   commands[id] = { id, command, schedule }
@@ -116,21 +115,22 @@ app.post('/api', (req, res) => {
 
 // Delete specific command
 app.delete('/api/:id', (req, res) => {
-  if (!commands[req.params.id]) return res.status(404).send('Command not found')
+  if (!/127.0.0.1/.test(req.ip)) return res.status(401).send('unauthorized_remote_action')
+  if (!commands[req.params.id]) return res.status(404).send('command_not_found')
   delete commands[req.params.id]
   res.send('OK')
 })
 
 // Run specific command
 app.get('/api/:id/run', (req, res) => {
-  if (!commands[req.params.id]) return res.status(404).send('Command not found')
+  if (!commands[req.params.id]) return res.status(404).send('command_not_found')
   run(commands[req.params.id])
   res.send('OK')
 })
 
 // Skip specific command
 app.get('/api/:id/skip', (req, res) => {
-  if (!commands[req.params.id]) return res.status(404).send('Command not found')
+  if (!commands[req.params.id]) return res.status(404).send('command_not_found')
   commands[req.params.id].skip = true
   res.send('OK')
 })
