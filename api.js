@@ -6,6 +6,31 @@ app.use(express.static('static'))
 app.use(express.json())
 app.use(morgan(':method :url :status :response-time ms - :date[iso]'))
 
+const axios = require('axios')
+const email = (to, subject, content) => axios({
+  method: 'POST',
+  url: 'https://api.sendgrid.com/v3/mail/send',
+  headers: {
+    'Authorization': 'Bearer ' + process.env.SENDGRID_API_KEY,
+    'Content-Type': 'application/json'
+  },
+  data: {
+    "personalizations": [{
+      "to": [{
+        "email": to || process.env.COMMANDR_EMAIL || "robot@100m.io"
+      }],
+      "subject": subject || "Commandr Run Status"
+    }],
+    "from": {
+      "email": "robot@100m.io"
+    },
+    "content": [{
+      "type": "text/plain",
+      "value": content
+    }]
+  },
+})
+
 const Sugar = require('sugar')
 const fs = require('fs')
 const os = require('os')
@@ -20,22 +45,7 @@ const running = pid => {
 Sugar.extend({ objectPrototype: true })
 
 let timeout = null
-const commands = new Proxy(fs.existsSync(cmdpath) ? require(cmdpath) : {}, {
-  set: (obj, key, value) => {
-    if (obj[key]) return false
-    obj[key] = value
-    fs.writeFileSync(cmdpath, JSON.stringify(obj))
-    update_timer()
-    return true
-  },
-  deleteProperty: function (obj, key) {
-    if (!obj[key]) return false
-    delete obj[key]
-    fs.writeFileSync(cmdpath, JSON.stringify(obj))
-    update_timer()
-    return true
-  },
-})
+const commands = fs.existsSync(cmdpath) ? require(cmdpath) : {}
 const next = cmd => {
   const schedule = cmd.schedule
   if (!schedule) return null
@@ -63,10 +73,11 @@ const next = cmd => {
   return cmd
 }
 const run = cmd => {
+  if (!cmd) return
   delete cmd.skip
   if (!cmd.runs) cmd.runs = []
-  if (!cmd.onsuccess) cmd.onsuccess = console.log
-  if (!cmd.onerror) cmd.onerror = console.error
+  const onsuccess = () => email(cmd.email, 'Command ran successfully', JSON.stringify(cmd)) && run(commands[cmd.onsuccess])
+  const onerror = () => email(cmd.email, 'Command errored', JSON.stringify(cmd))
   const start = new Date()
   const program = cmd.command.split(' ')[0]
   const args = cmd.command.split(' ').slice(1)
@@ -79,8 +90,8 @@ const run = cmd => {
   child.on('close', code => {
     cmd.run.duration = new Date() - start
     cmd.runs.push(cmd.run)
-    if (code !== 0 || cmd.run.err || cmd.run.stderr) cmd.onerror(cmd)
-    else cmd.onsuccess(cmd)
+    if (code !== 0 || cmd.run.err || cmd.run.stderr) onerror()
+    else onsuccess()
     delete cmd.run
     update_timer()
   })
@@ -88,6 +99,7 @@ const run = cmd => {
 const update_timer = () => {
   clearTimeout(timeout)
   commands.map(next)
+  fs.writeFileSync(cmdpath, JSON.stringify(commands))
   const cmd = commands[commands.filter(c => c.nextrun).min('nextrun')]
   if (!cmd) return
   timeout = setTimeout(() => {
@@ -108,8 +120,9 @@ app.post('/api', (req, res) => {
   if (!/127.0.0.1/.test(req.ip)) return res.status(401).send('unauthorized_remote_action')
   if (!req.body.command) return res.status(400).send('command_not_specified')
   const id = 'c' + new Date().toISOString()
-  const { command, schedule } = req.body
-  commands[id] = { id, command, schedule }
+  const { command, schedule, email, onsuccess, onerror } = req.body
+  commands[id] = { id, command, schedule, email, onsuccess, onerror }
+  update_timer()
   res.send('Command ID: ' + id)
 })
 
@@ -118,6 +131,7 @@ app.delete('/api/:id', (req, res) => {
   if (!/127.0.0.1/.test(req.ip)) return res.status(401).send('unauthorized_remote_action')
   if (!commands[req.params.id]) return res.status(404).send('command_not_found')
   delete commands[req.params.id]
+  update_timer()
   res.send('OK')
 })
 
@@ -125,6 +139,7 @@ app.delete('/api/:id', (req, res) => {
 app.get('/api/:id/run', (req, res) => {
   if (!commands[req.params.id]) return res.status(404).send('command_not_found')
   run(commands[req.params.id])
+  update_timer()
   res.send('OK')
 })
 
@@ -132,6 +147,7 @@ app.get('/api/:id/run', (req, res) => {
 app.get('/api/:id/skip', (req, res) => {
   if (!commands[req.params.id]) return res.status(404).send('command_not_found')
   commands[req.params.id].skip = true
+  update_timer()
   res.send('OK')
 })
 
