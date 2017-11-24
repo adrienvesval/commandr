@@ -2,7 +2,7 @@ const express = require('express')
 const app = express()
 const morgan = require('morgan')
 
-app.use(express.static('static'))
+app.use(express.static('app/dist'))
 app.use(express.json())
 app.use(morgan(':method :url :status :response-time ms - :date[iso]'))
 
@@ -75,6 +75,7 @@ const next = cmd => {
 const run = cmd => {
   if (!cmd) return
   delete cmd.skip
+  if (cmd.run && running(cmd.run.pid)) return email(cmd.email, 'Command skipped (still running)', JSON.stringify(cmd))
   if (!cmd.runs) cmd.runs = []
   const onsuccess = () => email(cmd.email, 'Command ran successfully', JSON.stringify(cmd)) && run(commands[cmd.onsuccess])
   const onerror = () => email(cmd.email, 'Command errored', JSON.stringify(cmd))
@@ -104,7 +105,6 @@ const update_timer = () => {
   if (!cmd) return
   timeout = setTimeout(() => {
     update_timer()
-    if (cmd.run && running(cmd.run.pid)) return console.error('Command was scheduled but is still running', cmd)
     run(cmd)
   }, cmd.nextrun - new Date())
 }

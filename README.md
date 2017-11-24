@@ -49,10 +49,10 @@ curl -X DELETE 127.0.0.1:1111/api/command3
 ### DEV
 ```bash
 # Build app - DEV
-vue build app.vue # 127.0.0.1:4000
+vue build app/app.vue # 127.0.0.1:4000
 corsproxy # + change API const to '//127.0.0.1:1337/127.0.0.1:1111'
 # Build app - PROD (pre-commit)
-vue build app.vue --prod --disable-compress && cp app.html dist/app.html && cd dist/ && ls *.js | xargs -I '{}' sed -i '' 's/<<<JS>>>/{}/g' app.html && ls *.css | xargs -I '{}' sed -i '' 's/<<<CSS>>>/{}/g' app.html && inliner --nosvg -mni app.html > index.html && cp index.html ../static/index.html && cd .. && rm -rf dist
+vue build app/app.vue --prod --disable-compress && cp app/app.html dist/app.html && cd dist/ && ls *.js | xargs -I '{}' sed -i '' 's/<<<JS>>>/{}/g' app.html && ls *.css | xargs -I '{}' sed -i '' 's/<<<CSS>>>/{}/g' app.html && inliner --nosvg -mni app.html > ../app/dist/index.html && cd - && rm -rf dist
 ```
 
 ### Inspiration
