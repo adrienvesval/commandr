@@ -30,6 +30,39 @@ const email = (to, subject, content) => axios({
     }]
   },
 })
+function msToTime(duration) {
+        if (duration < 1000) return duration + 'ms'
+        var seconds = parseInt((duration/1000)%60)
+        var minutes = parseInt((duration/(1000*60))%60)
+        var hours = parseInt((duration/(1000*60*60))%24);
+
+        hours = (hours < 10) ? "0" + hours : hours;
+        minutes = (minutes < 10) ? "0" + minutes : minutes;
+        seconds = (seconds < 10) ? "0" + seconds : seconds;
+
+        return hours + ":" + minutes + ":" + seconds;
+    }
+const template = (cmd, status) => {
+  let subject, current
+  if (status === 'success') {
+    subject = 'Command ran successfully'
+    current = `Command ${cmd.command} ran successfully at ${cmd.run.start.slice(0,10)} ${cmd.run.start.slice(11,16)} in ${msToTime(cmd.run.duration)} on machine ${os.hostname()} ${os.platform()} ${os.arch()}.`
+  }
+  if (status === 'skip') {
+    subject = 'Command skipped'
+    current = `Command ${cmd.command} scheduled at ${cmd.run.start.slice(0,10)} ${cmd.run.start.slice(11,16)}  was skipped, previous command was still running.`
+  }
+  if (status === 'error') {
+    subject = 'Command failed'
+    current = `Command ${cmd.command} scheduled at ${cmd.run.start.slice(0,10)} ${cmd.run.start.slice(11,16)}  failed to run.`
+  }
+  const previous = 'Previous runs were at:\n\n' + cmd.runs.slice(-6,-1).map(run => run.start.slice(0,16)).join('\n\n')
+  const nextrun = cmd.nextrun ? cmd.nextrun.toISOString() : ''
+  const next = 'Next run scheduled at:\n\n' + nextrun.slice(0,16)
+  const content = `${current}\n\n${previous}\n\n${next}\n\n`
+  return email(cmd.email, subject, content)
+}
+
 
 const Sugar = require('sugar')
 const fs = require('fs')
@@ -75,10 +108,10 @@ const next = cmd => {
 const run = cmd => {
   if (!cmd) return
   delete cmd.skip
-  if (cmd.run && running(cmd.run.pid)) return email(cmd.email, 'Command skipped (still running)', JSON.stringify(cmd))
+  if (cmd.run && running(cmd.run.pid)) return template(cmd, 'skip')
   if (!cmd.runs) cmd.runs = []
-  const onsuccess = () => email(cmd.email, 'Command ran successfully', JSON.stringify(cmd)) && run(commands[cmd.onsuccess])
-  const onerror = () => email(cmd.email, 'Command errored', JSON.stringify(cmd))
+  const onsuccess = () => template(cmd, 'success')
+  const onerror = () => template(cmd, 'error')
   const start = new Date()
   const program = cmd.command.split(' ')[0]
   const args = cmd.command.split(' ').slice(1)
@@ -109,7 +142,6 @@ const update_timer = () => {
   }, cmd.nextrun - new Date())
 }
 update_timer()
-
 // List all commands and all runs
 app.get('/api', (req, res) => {
   res.send(commands)
