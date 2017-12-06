@@ -7,7 +7,7 @@ app.use(express.json())
 app.use(morgan(':method :url :status :response-time ms - :date[iso]'))
 
 const axios = require('axios')
-const email = (to, subject, content) => axios({
+const email = (to, subject, content) => process.env.SENDGRID_API_KEY && axios({
   method: 'POST',
   url: 'https://api.sendgrid.com/v3/mail/send',
   headers: {
@@ -30,18 +30,16 @@ const email = (to, subject, content) => axios({
     }]
   },
 })
-function msToTime(duration) {
-        if (duration < 1000) return duration + 'ms'
-        var seconds = parseInt((duration/1000)%60)
-        var minutes = parseInt((duration/(1000*60))%60)
-        var hours = parseInt((duration/(1000*60*60))%24);
-
-        hours = (hours < 10) ? "0" + hours : hours;
-        minutes = (minutes < 10) ? "0" + minutes : minutes;
-        seconds = (seconds < 10) ? "0" + seconds : seconds;
-
-        return hours + ":" + minutes + ":" + seconds;
-    }
+const msToTime = duration => {
+  if (duration < 1000) return duration + 'ms'
+  var seconds = parseInt((duration / 1000) % 60)
+  var minutes = parseInt((duration / (1000 * 60)) % 60)
+  var hours = parseInt((duration / (1000 * 60 * 60)) % 24)
+  hours = (hours < 10) ? "0" + hours : hours
+  minutes = (minutes < 10) ? "0" + minutes : minutes
+  seconds = (seconds < 10) ? "0" + seconds : seconds
+  return hours + ":" + minutes + ":" + seconds
+}
 const template = (cmd, status) => {
   let subject, current
   if (status === 'success') {
@@ -56,13 +54,12 @@ const template = (cmd, status) => {
     subject = 'Command failed'
     current = `Command ${cmd.command} scheduled at ${cmd.run.start.slice(0,10)} ${cmd.run.start.slice(11,16)}  failed to run.`
   }
-  const previous = 'Previous runs were at:\n\n' + cmd.runs.slice(-6,-1).map(run => run.start.slice(0,16)).join('\n\n')
+  const previous = 'Previous runs were at:\n\n' + cmd.runs.slice(-6, -1).map(run => run.start.slice(0, 16)).join('\n\n')
   const nextrun = cmd.nextrun ? cmd.nextrun.toISOString() : ''
-  const next = 'Next run scheduled at:\n\n' + nextrun.slice(0,16)
+  const next = 'Next run scheduled at:\n\n' + nextrun.slice(0, 16)
   const content = `${current}\n\n${previous}\n\n${next}\n\n`
   return email(cmd.email, subject, content)
 }
-
 
 const Sugar = require('sugar')
 const fs = require('fs')
@@ -72,10 +69,9 @@ const { spawn } = require('child_process')
 const cmdpath = path.join(os.homedir(), '.commandr.json')
 const running = pid => {
   if (!pid) return false
-  try { return process.kill(pid, 0) }
-  catch (e) { return e.code === 'EPERM' }
+  try { return process.kill(pid, 0) } catch (e) { return e.code === 'EPERM' }
 }
-Sugar.extend({ objectPrototype: true })
+Sugar.extend({ objectPrototype: true })
 
 let timeout = null
 const commands = fs.existsSync(cmdpath) ? require(cmdpath) : {}
