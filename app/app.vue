@@ -6,27 +6,38 @@
 html { font-family: Lato; }
 body { font-size: 1.4rem;background: var(--background-1); }
 h1 { height: 60px;line-height: 60px;font-size: 18px;text-transform: uppercase;text-align: center;border-bottom: var(--border);background: var(--background); }
+section { padding: 0;margin: 2rem!important;max-width: calc(100% - 4rem); }
 em { font-style: normal;color: var(--primary); }
-.running { background: var(--highlight); }
 @media (min-width: 1000px) {
-  section, header, footer { max-width: 100%;width: auto; }
+  section, header, footer { margin: 2rem auto!important; }
   body { font-size: 1.6rem; }
 }
+@media (max-width: 1000px) {
+  form, .day:not(:last-child) { display: none!important; }
+}
 [grid] > * { background: var(--background);box-shadow: var(--box-shadow); }
-form { padding: 10px 20px;border-top: var(--border);border-bottom: var(--border);transition: var(--transition); }
-[name="command"] { width: 180px;margin-left: 18px; }
-[name="hours"] { width: 40px; }
-[name="email"] { width: 180px;margin-left: 38px; }
-[name="onsuccess"] { width: 180px; }
-main > button { margin-left: 20px; }
-form button { width: 100px;margin-left: 84px; }
-.kpi, .kpi-timer { min-width: 300px!important; }
+.kpi, .kpi-timer { min-width: 300px!important;min-height: 80px; }
 
-.cmd { overflow: auto;margin: 10px 0;background: var(--background);box-shadow: var(--box-shadow); }
+.table-list { background: var(--background);box-shadow: var(--box-shadow);overflow: auto; }
+[name="command"] { width: 180px; }
+[name="hours"] { width: 40px; }
+input::-webkit-clear-button { -webkit-appearance: none;margin: 0; }
+label { display: flex;margin: 0 8px; }
+label input { margin: 0 4px; }
+[xs] { font-size: 9px; }
+
+.cmd { position: relative; }
+.cmd [tt] { position: inherit; }
+.cmd.new { padding: 10px; }
+.cmd.header { background: #e0eaff;font-weight: 700; }
+.cmd.header > * { padding: 10px; }
+.cmd.item:nth-child(odd) { background: rgba(0, 0, 0, .03); }
+.cmd.item:hover { background: rgba(0, 0, 0, .08); }
+.cmd.item > * { padding: 10px;line-height: 1.2; }
 .cmd > * { min-height: 100%; }
-.cmd .name { width: 100px; }
+.cmd .name { width: 200px;font-weight: 700; }
 .cmd .action { width: 60px; }
-.day { margin: 0 4px;min-width: 144px; }
+.day { margin: 0 4px;min-width: 160px; }
 .cell { margin: 1px;width: 10px;height: 10px;background: #606a7f; }
 .cell.future { background: #b0bacf; }
 .cell.running { background: #fd4; }
@@ -36,62 +47,46 @@ form button { width: 100px;margin-left: 84px; }
 
 <template>
 <main>
-  <h1 v-html="t.project"></h1>
+  <h1>Command Scheduler</h1>
   <section grid>
-    <kpi :data="[['Commands', commands.values().length], ['Running', running.map('command').join(' - ')], ['Runs', runs], ['Errors', errors]]" />
+    <kpi :data="[['Machine', machine], ['Notify', notify], ['Cmds', commands.values().length], ['Runs', runs], ['Errors', errors]]" />
     <div class="kpi-timer" row center around>
       <span column>
-        <span>{{ t.nextcmd }}</span>
+        <span>Next Run</span>
         <span style="font-weight: 700;font-size: 18px;line-height: 18px;">{{ next.command }}</span>
       </span>
       <timer :time="next.nextrun" @time="list"></timer>
     </div>
   </section>
-  <button @click="show = !show" v-if="commands.values().length !== 0">{{ show ? 'HIDE' : 'SHOW' }} FORM</button>
-  <form @submit.prevent="add($event.target)" v-if="commands.values().length === 0 || show">
-    <label>*
-      {{ t.command }}
-      <input type="text" name="command" required></input>
-    </label>
-    <br>
-    <label>
-      {{ t.schedule }}
-      {{ t.at }} <input type="time" name="start" value="00:00"></input>
-    </label>
-    <label>
-      {{ t.every }} <input type="number" name="hours" min="1"></input> {{ t.hours }}
-    </label>
-    <br>
-    <label>
-      {{ t.email }} <input type="email" name="email" :value="commands.values().map('email').filter(x => x).most()"></input>
-    </label>
-    <br>
-    <label>
-      {{ t.onsuccess }} <select name="onsuccess">
-        <option></option>
-        <option :value="command.id" v-for="command in commands">{{ command.command }}</option>
-      </select>
-    </label>
-    <br>
-    <button>{{ t.add }}</button>
-  </form>
   <section>
-    <div class="cmd header" row>
-      <span class="name">NAME</span>
-      <span class="action">ACTION</span>
-      <div class="day" row center v-for="runs, day in days">
-        {{ day }}
+    <div class="table-list">
+      <form class="cmd new" row @submit.prevent="add($event.target)">
+        <input type="text" name="command" placeholder="Command" required></input>
+        <label>Every<input type="number" name="hours" min="1"></input>(H)</label>
+        <label>At<input type="time" name="start" value="00:00"></input>(HH:MM)</label>
+        <button>ADD</button>
+      </form>
+      <div class="cmd header" row>
+        <div class="name" f1>Command</div>
+        <div class="day" row center v-for="runs, day in days">
+          {{ day }}
+        </div>
       </div>
-    </div>
-    <div class="cmd" row v-for="command in commands">
-      <span class="name" :tt="JSON.stringify(command)">{{ command.command }}</span>
-      <button class="action" @click="run(command.id)">{{ t.run }}</button>
-      <div class="day" row center v-for="runs, day in days">
-        <!-- :tt="'Hours: ' + hours_x2 * 2"  -->
-        <div class="cells" column v-for="hours_x2 in 12">
-          <div class="cell" :class="day === new Date().iso().slice(0, 10) && hours_x2 * 2 > new Date().iso().slice(11, 13) && 'future'" v-if="!command.runs || command.runs.intersect(runs).filter(d => Math.trunc(d.start.slice(11, 13) / 2) === hours_x2).length === 0"></div>
-          <div class="cell" :class="run.stderr || run.err ? 'negative' : 'positive'" :tt="JSON.stringify(run)" v-for="run in command.runs.intersect(runs).filter(d => Math.trunc(d.start.slice(11, 13) / 2) === hours_x2)" v-else></div>
-          <div class="cell running" :tt="JSON.stringify(command.run)" v-if="command.run && command.run.start.slice(0, 10) === day && Math.trunc(command.run.start.slice(11, 13) / 2) === hours_x2"></div>
+      <div class="cmd item" row v-for="command in commands">
+        <div class="name" f1 column center left>
+          <span>{{ command.command }}</span>
+          <div>
+            <span xs v-if="command.nextrun">{{ command.nextrun.slice(0, 16).replace('T', ' at ') }}</span>
+            <button @click="run(command.id)">RUN</button>
+            <button @click="del(command.id)">DEL</button>
+          </div>
+        </div>
+        <div class="day" row center v-for="runs, day in days">
+          <div class="cells" column v-for="hours_x2 in 12">
+            <div class="cell" :class="day === new Date().iso().slice(0, 10) && hours_x2 * 2 > new Date().iso().slice(11, 13) && 'future'" v-if="!command.runs || command.runs.intersect(runs).filter(d => Math.trunc(d.start.slice(11, 13) / 2) === hours_x2).length === 0"></div>
+            <div class="cell" :class="run.stderr || run.err ? 'negative' : 'positive'" :tt="JSON.stringify(run)" v-for="run in command.runs.intersect(runs).filter(d => Math.trunc(d.start.slice(11, 13) / 2) === hours_x2)" v-else></div>
+            <div class="cell running" :tt="JSON.stringify(command.run)" v-if="command.run && command.run.start.slice(0, 10) === day && Math.trunc(command.run.start.slice(11, 13) / 2) === hours_x2"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -113,37 +108,16 @@ export default {
     this.list()
     return {
       commands: {},
-      show: false,
-      lang: 'en',
-      translation: {
-        en: {
-          project: "Command scheduler",
-          nextcmd: "Next Command",
-          id: "ID",
-          command: "Command",
-          schedule: "Schedule",
-          at: "at",
-          every: "Every",
-          hours: "Hours",
-          email: "Email",
-          onsuccess: "On success",
-          add: "SCHEDULE",
-          run: "RUN",
-          skip: "SKIP",
-          del: "DELETE",
-        }
-      }
+      machine: null,
+      notify: null,
     }
   },
   computed: {
-    t() {
-      return this.translation[this.lang] || {}
-    },
     next() {
       return this.commands.values().filter(d => d.nextrun).min(d => d.nextrun) || {}
     },
     running() {
-      return this.commands.values().filter(d => d.run)
+      return this.commands.values().filter(d => d.run).map('command').join(' - ') || '-'
     },
     runs() {
       return this.commands.values().map('runs').filter(d => d).flatten().filter(d => !d.err && !d.stderr).length
@@ -157,15 +131,16 @@ export default {
   },
   methods: {
     list() {
-      axios.get(API).then(res => this.commands = res.data)
+      axios.get(API).then(res => {
+        this.commands = res.data.commands
+        this.machine = res.data.machine
+        this.notify = res.data.notify
+      })
     },
     add(form) {
-      this.show = false
       const data = {
         command: form.command.value,
         schedule: form.hours.value && ['R', new Date(new Date().iso().slice(0, 11) + form.start.value).iso().replace(/\.\d{3}/, ''), 'PT' + form.hours.value + 'H'].join('/'),
-        email: form.email.value,
-        onsuccess: form.onsuccess.value,
       }
       axios.post(API, data).then(this.list)
     },
@@ -176,7 +151,7 @@ export default {
       axios.get(API + id + '/skip').then(this.list)
     },
     del(id) {
-      confirm('Sure?') && axios.delete(API + id).then(this.list)
+      confirm('Delete ' + this.commands[id].command + '?') && axios.delete(API + id).then(this.list)
     },
   },
   mounted() {

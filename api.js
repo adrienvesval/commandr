@@ -7,7 +7,7 @@ app.use(express.json())
 app.use(morgan(':method :url :status :response-time ms - :date[iso]'))
 
 const axios = require('axios')
-const email = (to, subject, content) => process.env.SENDGRID_API_KEY && axios({
+const email = (subject, content) => process.env.SENDGRID_API_KEY && axios({
   method: 'POST',
   url: 'https://api.sendgrid.com/v3/mail/send',
   headers: {
@@ -17,7 +17,7 @@ const email = (to, subject, content) => process.env.SENDGRID_API_KEY && axios({
   data: {
     "personalizations": [{
       "to": [{
-        "email": to || process.env.COMMANDR_EMAIL || "robot@100m.io"
+        "email": process.env.COMMANDR_EMAIL || "robot@100m.io"
       }],
       "subject": subject || "Commandr Run Status"
     }],
@@ -58,7 +58,7 @@ const template = (cmd, status) => {
   const nextrun = cmd.nextrun ? cmd.nextrun.toISOString() : ''
   const next = 'Next run scheduled at:\n\n' + nextrun.slice(0, 16)
   const content = `${current}\n\n${previous}\n\n${next}\n\n`
-  return email(cmd.email, subject, content)
+  return email(subject, content)
 }
 
 const Sugar = require('sugar')
@@ -140,7 +140,7 @@ const update_timer = () => {
 update_timer()
 // List all commands and all runs
 app.get('/api', (req, res) => {
-  res.send(commands)
+  res.send({ commands, machine: os.hostname(), notify: process.env.COMMANDR_EMAIL || 'robot@100m.io' })
 })
 
 // Post new command
@@ -148,8 +148,8 @@ app.post('/api', (req, res) => {
   if (!/127.0.0.1/.test(req.ip)) return res.status(401).send('unauthorized_remote_action')
   if (!req.body.command) return res.status(400).send('command_not_specified')
   const id = 'c' + new Date().toISOString()
-  const { command, schedule, email, onsuccess, onerror } = req.body
-  commands[id] = { id, command, schedule, email, onsuccess, onerror }
+  const { command, schedule } = req.body
+  commands[id] = { id, command, schedule }
   update_timer()
   res.send('Command ID: ' + id)
 })
