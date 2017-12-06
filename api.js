@@ -131,7 +131,7 @@ const update_timer = () => {
   commands.map(next)
   fs.writeFileSync(cmdpath, JSON.stringify(commands))
   const nextrun = commands.filter(c => c.nextrun).map('nextrun').values().min()
-  const cmds = commands.filter(c => c.nextrun.toISOString() === nextrun.toISOString())
+  const cmds = commands.filter({ nextrun })
   timeout = setTimeout(() => {
     update_timer()
     cmds.map((cmd,id) => run(cmd))
