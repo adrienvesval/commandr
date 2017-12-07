@@ -35,7 +35,9 @@ label input { margin: 0 4px; }
 .cmd.item:hover { background: rgba(0, 0, 0, .08); }
 .cmd.item > * { padding: 10px;line-height: 1.2; }
 .cmd > * { min-height: 100%; }
-.cmd .name { width: 200px;font-weight: 700; }
+.cmd .name { min-width: 200px;font-weight: 700; }
+.cmd .name > div:first-child { display: flex;width: 100%; }
+.cmd .name > div:first-child > span:first-child { margin-right: auto; }
 .cmd .action { width: 60px; }
 .day { margin: 0 4px;min-width: 160px; }
 .cell { margin: 1px;width: 10px;height: 10px;background: #606a7f; }
@@ -53,7 +55,7 @@ label input { margin: 0 4px; }
     <div class="kpi-timer" row center around>
       <span column>
         <span>Next Run</span>
-        <span style="font-weight: 700;font-size: 18px;line-height: 18px;">{{ next.command }}</span>
+        <span style="font-weight: 700;font-size: 18px;line-height: 18px;">{{ next.command.replace(/['"]/g, '').split(' ').map(w => w.split(/(\\|\/)/).last()).join(' ') }}</span>
       </span>
       <timer :time="next.nextrun" @time="list"></timer>
     </div>
@@ -74,11 +76,13 @@ label input { margin: 0 4px; }
       </div>
       <div class="cmd item" row v-for="command in commands">
         <div class="name" f1 column center left>
-          <span>{{ command.command }}</span>
           <div>
-            <span xs v-if="command.nextrun">{{ nexttime(command) }}</span>
+            <span>{{ command.command.replace(/['"]/g, '').split(' ').map(w => w.split(/(\\|\/)/).last()).join(' ') }}</span>
             <button @click="run(command.id)">RUN</button>
             <button @click="del(command.id)">DEL</button>
+          </div>
+          <div>
+            <span xs v-if="command.nextrun">{{ nexttime(command) }}</span>
           </div>
         </div>
         <div class="day" row center v-for="runs, day in days">
@@ -126,7 +130,7 @@ export default {
       return this.commands.values().map('runs').filter(d => d).flatten().filter(d => d.err || d.stderr).length
     },
     days() {
-      return this.commands.values().map('runs').filter(d => d).flatten().groupBy(d => d.start.slice(0, 10)).filter((v, k, o) => o.keys().last(5).includes(k))
+      return this.commands.values().map('runs').filter(d => d).flatten().groupBy(d => d.start.slice(0, 10)).filter((v, k, o) => o.keys().last(4).includes(k))
     },
   },
   methods: {
