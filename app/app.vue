@@ -1,5 +1,5 @@
 <style>
-@import '//rawcss.com/raw.css';
+@import 'https://rawcss.com/raw.css';
 @import url('https://fonts.googleapis.com/css?family=Lato:100,300,400,900');
 .hack {}
 :root { --background-1: #f1f4f9;--box-shadow: 0 3px 10.5px 0 rgba(74, 105, 160, 0.16);--transition: all .3s cubic-bezier(.4, .0, .2, 1); }
@@ -76,7 +76,7 @@ label input { margin: 0 4px; }
         <div class="name" f1 column center left>
           <span>{{ command.command }}</span>
           <div>
-            <span xs v-if="command.nextrun">{{ command.nextrun.slice(0, 16).replace('T', ' at ') }}</span>
+            <span xs v-if="command.nextrun">{{ nexttime(command) }}</span>
             <button @click="run(command.id)">RUN</button>
             <button @click="del(command.id)">DEL</button>
           </div>
@@ -100,7 +100,7 @@ import Sugar from 'sugar'
 import Kpi from './Kpi.vue'
 import Timer from './Timer.vue'
 Sugar.extend({ objectPrototype: true })
-const API = '//127.0.0.1:1337/127.0.0.1:1111/api/'
+const API = 'api/'
 
 export default {
   components: { Kpi, Timer },
@@ -153,6 +153,12 @@ export default {
     del(id) {
       confirm('Delete ' + this.commands[id].command + '?') && axios.delete(API + id).then(this.list)
     },
+    nexttime(cmd) {
+      let day = cmd.nextrun.slice(0, 10)
+      if (day === new Date().iso().slice(0, 10)) day = 'Today'
+      if (day === new Date().advance('1 day').iso().slice(0, 10)) day = 'Tomorrow'
+      return day + ' at ' + cmd.nextrun.slice(11, 16)
+    }
   },
   mounted() {
     setInterval(() => {
