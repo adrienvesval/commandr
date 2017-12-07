@@ -126,7 +126,7 @@ export default {
       return this.commands.values().map('runs').filter(d => d).flatten().filter(d => d.err || d.stderr).length
     },
     days() {
-      return this.commands.values().map('runs').filter(d => d).flatten().groupBy(d => d.start.slice(0, 10))
+      return this.commands.values().map('runs').filter(d => d).flatten().groupBy(d => d.start.slice(0, 10)).filter((v, k, o) => o.keys().last(5).includes(k))
     },
   },
   methods: {
