@@ -12,15 +12,13 @@ em { font-style: normal;color: var(--primary); }
   section, header, footer { margin: 2rem auto!important; }
   body { font-size: 1.6rem; }
 }
-@media (max-width: 1000px) {
-  form, .day:not(:last-child) { display: none!important; }
-}
 [grid] > * { background: var(--background);box-shadow: var(--box-shadow); }
 .kpi, .kpi-timer { min-width: 300px!important;min-height: 80px; }
 
 .table-list { background: var(--background);box-shadow: var(--box-shadow);overflow: auto; }
-[name="command"] { width: 180px; }
-[name="hours"] { width: 40px; }
+input { width: 180px; }
+[name="id"] { width: 30px; }
+[name="runhook"], [name="hours"] { width: 40px; }
 input::-webkit-clear-button { -webkit-appearance: none;margin: 0; }
 label { display: flex;margin: 0 8px; }
 label input { margin: 0 4px; }
@@ -28,7 +26,8 @@ label input { margin: 0 4px; }
 
 .cmd { position: relative; }
 .cmd [tt] { position: inherit; }
-.cmd.new { padding: 10px; }
+.cmd.new, .cmd.edit { padding: 10px; }
+.cmd.highlight { background: var(--highlight); }
 .cmd.header { background: #e0eaff;font-weight: 700; }
 .cmd.header > * { padding: 10px; }
 .cmd.item:nth-child(odd) { background: rgba(0, 0, 0, .03); }
@@ -55,7 +54,7 @@ label input { margin: 0 4px; }
     <div class="kpi-timer" row center around>
       <span column>
         <span>Next Run</span>
-        <span style="font-weight: 700;font-size: 18px;line-height: 18px;">{{ next.command.replace(/['"]/g, '').split(' ').map(w => w.split(/(\\|\/)/).last()).join(' ') }}</span>
+        <span style="font-weight: 700;font-size: 18px;line-height: 18px;">{{ next.command && next.command.replace(/['"]/g, '').split(' ').map(w => w.split(/(\\|\/)/).last()).join(' ') }}</span>
       </span>
       <timer :time="next.nextrun" @time="list"></timer>
     </div>
@@ -63,32 +62,36 @@ label input { margin: 0 4px; }
   <section>
     <div class="table-list">
       <form class="cmd new" row @submit.prevent="add($event.target)">
+        <input type="text" name="id" :value="'#' + (counter + 1)" disabled></input>
         <input type="text" name="command" placeholder="Command" required></input>
-        <label>Every<input type="number" name="hours" min="1"></input>(H)</label>
-        <label>At<input type="time" name="start" value="00:00"></input>(HH:MM)</label>
         <button>ADD</button>
       </form>
+      <form class="cmd edit" @submit.prevent="edit(commands[highlight].id, $event.target)" v-show="highlight">
+        <label>Run Every<input type="number" name="hours" min="1" @input="hours2schedule"></input>(H)</label>
+        <label>Or Schedule<input type="text" name="schedule" placeholder="R[num]/[date]/PT[incr]"></input></label>
+        <label>Run After<input type="text" name="runhook" placeholder="#1"></input></label>
+        <label>On Success<input type="text" name="onsuccess" placeholder="Command ✓"></input></label>
+        <label>On Error<input type="text" name="onerror" placeholder="Command ✗"></input></label>
+        <button type="button" @click="del(commands[highlight].id)">DEL</button>
+        <button>SAVE</button>
+      </form>
       <div class="cmd header" row>
-        <div class="name" f1>Command</div>
-        <div class="day" row center v-for="runs, day in days">
-          {{ day }}
-        </div>
+        <div>ID</div>
+        <div f1>Command</div>
+        <div class="day" row center>{{ day }}</div>
       </div>
-      <div class="cmd item" row v-for="command in commands">
-        <div class="name" f1 column center left>
-          <div>
-            <span>{{ command.command.replace(/['"]/g, '').split(' ').map(w => w.split(/(\\|\/)/).last()).join(' ') }}</span>
-            <button @click="run(command.id)">RUN</button>
-            <button @click="del(command.id)">DEL</button>
-          </div>
-          <div>
-            <span xs v-if="command.nextrun">{{ nexttime(command) }}</span>
-          </div>
+      <div class="cmd item" :class="{ highlight: highlight === command.id }" row v-for="command in commands" @click="highlight = highlight === command.id ? null : command.id">
+        <div>{{ command.id.replace('C', '#') }}</div>
+        <div f1>{{ command.command.replace(/['"]/g, '').split(' ').map(w => w.split(/(\\|\/)/).last()).join(' ') }}</div>
+        <div><span v-if="command.nextrun">{{ nexttime(command) }}</span></div>
+        <div>
+          <button @click="kill(command.id)" v-if="command.run">KILL</button>
+          <button @click="run(command.id)">RUN</button>
         </div>
-        <div class="day" row center v-for="runs, day in days">
+        <div class="day" row center>
           <div class="cells" column v-for="hours_x2 in 12">
-            <div class="cell" :class="day === new Date().iso().slice(0, 10) && hours_x2 * 2 > new Date().iso().slice(11, 13) && 'future'" v-if="!command.runs || command.runs.intersect(runs).filter(d => Math.trunc(d.start.slice(11, 13) / 2) === hours_x2).length === 0"></div>
-            <div class="cell" :class="run.stderr || run.err ? 'negative' : 'positive'" :tt="JSON.stringify(run)" v-for="run in command.runs.intersect(runs).filter(d => Math.trunc(d.start.slice(11, 13) / 2) === hours_x2)" v-else></div>
+            <div class="cell" :class="day === new Date().iso().slice(0, 10) && hours_x2 * 2 > new Date().iso().slice(11, 13) && 'future'" v-if="!command.runs || command.runs.filter(d => Math.trunc(d.start.slice(11, 13) / 2) === hours_x2).length === 0"></div>
+            <div class="cell" :class="run.error ? 'negative' : 'positive'" :tt="JSON.stringify(run)" v-for="run in command.runs.filter(d => Math.trunc(d.start.slice(11, 13) / 2) === hours_x2)" v-else></div>
             <div class="cell running" :tt="JSON.stringify(command.run)" v-if="command.run && command.run.start.slice(0, 10) === day && Math.trunc(command.run.start.slice(11, 13) / 2) === hours_x2"></div>
           </div>
         </div>
@@ -104,16 +107,19 @@ import Sugar from 'sugar'
 import Kpi from './Kpi.vue'
 import Timer from './Timer.vue'
 Sugar.extend({ objectPrototype: true })
-const API = 'api/'
+const API = 'http://127.0.0.1:1337/127.0.0.1:1111/api/'
 
 export default {
   components: { Kpi, Timer },
   data() {
     this.list()
     return {
+      day: new Date().iso().slice(0, 10),
+      counter: 0,
       commands: {},
       machine: null,
       notify: null,
+      highlight: null,
     }
   },
   computed: {
@@ -124,44 +130,70 @@ export default {
       return this.commands.values().filter(d => d.run).map('command').join(' - ') || '-'
     },
     runs() {
-      return this.commands.values().map('runs').filter(d => d).flatten().filter(d => !d.err && !d.stderr).length
+      return this.commands.values().map('runs').filter(d => d).flatten().filter(d => !d.error).length
     },
     errors() {
-      return this.commands.values().map('runs').filter(d => d).flatten().filter(d => d.err || d.stderr).length
+      return this.commands.values().map('runs').filter(d => d).flatten().filter(d => d.error).length
     },
     days() {
-      return this.commands.values().map('runs').filter(d => d).flatten().groupBy(d => d.start.slice(0, 10)).filter((v, k, o) => o.keys().last(4).includes(k))
+      return this.commands.values().map('runs').filter(d => d).flatten().groupBy(d => d.start.slice(0, 10))
     },
   },
   methods: {
+    reset() {
+      this.list()
+      this.highlight = false
+    },
     list() {
       axios.get(API).then(res => {
+        this.counter = res.data.counter
         this.commands = res.data.commands
         this.machine = res.data.machine
         this.notify = res.data.notify
       })
     },
     add(form) {
+      axios.post(API, { command: form.command.value }).then(this.reset)
+    },
+    edit(id, form) {
       const data = {
-        command: form.command.value,
-        schedule: form.hours.value && ['R', new Date(new Date().iso().slice(0, 11) + form.start.value).iso().replace(/\.\d{3}/, ''), 'PT' + form.hours.value + 'H'].join('/'),
+        schedule: form.schedule.value,
+        runhook: form.runhook.value.replace('#', 'C'),
+        onsuccess: form.onsuccess.value,
+        onerror: form.onerror.value,
       }
-      axios.post(API, data).then(this.list)
+      axios.put(API + id, data).then(this.reset)
     },
     run(id) {
-      axios.get(API + id + '/run').then(this.list)
+      axios.get(API + id + '/run').then(this.reset)
     },
     skip(id) {
-      axios.get(API + id + '/skip').then(this.list)
+      axios.get(API + id + '/skip').then(this.reset)
+    },
+    kill(id) {
+      axios.get(API + id + '/kill').then(this.reset)
     },
     del(id) {
-      confirm('Delete ' + this.commands[id].command + '?') && axios.delete(API + id).then(this.list)
+      confirm('Delete ' + this.commands[id].command + '?') && axios.delete(API + id).then(this.reset)
     },
     nexttime(cmd) {
       let day = cmd.nextrun.slice(0, 10)
       if (day === new Date().iso().slice(0, 10)) day = 'Today'
       if (day === new Date().advance('1 day').iso().slice(0, 10)) day = 'Tomorrow'
       return day + ' at ' + cmd.nextrun.slice(11, 16)
+    },
+    hours2schedule($event) {
+      document.querySelector('input[name="schedule"]').value = 'R/' + new Date().iso().slice(0, 13) + ':00/PT' + $event.target.value + 'H'
+    },
+  },
+  watch: {
+    highlight() {
+      const cmd = this.commands[this.highlight] || {}
+      document.querySelector('input[name="hours"]').value = null
+      document.querySelector('input[name="schedule"]').value = cmd.schedule || ''
+      document.querySelector('input[name="runhook"]').value = (cmd.runhook || '').replace('C', '#')
+      document.querySelector('input[name="onsuccess"]').value = cmd.onsuccess || ''
+      document.querySelector('input[name="onerror"]').value = cmd.onerror || ''
     }
   },
   mounted() {
