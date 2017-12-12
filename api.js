@@ -30,16 +30,6 @@ const email = (subject, content) => process.env.SENDGRID_API_KEY && axios({
     }]
   },
 })
-const msToTime = duration => {
-  if (duration < 1000) return duration + 'ms'
-  var seconds = parseInt((duration / 1000) % 60)
-  var minutes = parseInt((duration / (1000 * 60)) % 60)
-  var hours = parseInt((duration / (1000 * 60 * 60)) % 24)
-  hours = (hours < 10) ? "0" + hours : hours
-  minutes = (minutes < 10) ? "0" + minutes : minutes
-  seconds = (seconds < 10) ? "0" + seconds : seconds
-  return hours + ":" + minutes + ":" + seconds
-}
 const template = (cmd, status) => {
   const symbol = status === 'success' ? '✓' : '✗'
   const subject = `${symbol} Command ${status} - ${cmd.command}`
@@ -48,7 +38,7 @@ const template = (cmd, status) => {
     <li>Status: ${status}</li>
     <li>Start on: ${os.hostname()} - ${os.platform()} - ${os.arch()}</li>
     <li>At: ${cmd.run.start}</li>
-    <li>In: ${msToTime(cmd.run.duration)}</li>
+    <li>In: ${cmd.run.duration.duration()}</li>
     <li>Next: ${cmd.nextrun}</li>
   </ul>`
   return email(subject, content)
@@ -112,6 +102,7 @@ const onerror = cmd => {
   exec(cmd.onerror)
 }
 const close = (cmd, code) => {
+  if (!cmd.run) return // TODO: catch this error
   cmd.run.code = code
   cmd.run.error = code !== 0 || cmd.run.err || cmd.run.stderr
   cmd.run.duration = new Date() - new Date(cmd.run.start)

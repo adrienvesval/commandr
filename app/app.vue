@@ -2,7 +2,7 @@
 @import 'https://rawcss.com/raw.css';
 @import url('https://fonts.googleapis.com/css?family=Lato:100,300,400,900');
 .hack {}
-:root { --background-1: #f1f4f9;--box-shadow: 0 3px 10.5px 0 rgba(74, 105, 160, 0.16);--transition: all .3s cubic-bezier(.4, .0, .2, 1); }
+:root { --background-1: #f1f4f9;--box-shadow: 0 3px 10.5px 0 rgba(74, 105, 160, 0.16); }
 html { font-family: Lato; }
 body { font-size: 1.4rem;background: var(--background-1); }
 h1 { height: 60px;line-height: 60px;font-size: 18px;text-transform: uppercase;text-align: center;border-bottom: var(--border);background: var(--background); }
@@ -16,18 +16,26 @@ em { font-style: normal;color: var(--primary); }
 .kpi, .kpi-timer { min-width: 300px!important;min-height: 80px; }
 
 .table-list { background: var(--background);box-shadow: var(--box-shadow);overflow: auto; }
+hr { margin: 1rem 60px; }
 input { width: 180px; }
+input:hover, input:focus { outline: 1px solid #fd4;outline-offset: -1px; }
+input:disabled { outline: none; }
 [name="id"] { width: 30px; }
-[name="runhook"], [name="hours"] { width: 40px; }
+[name="runhook"] { width: 20px;margin: 0 2px 0 0; }
 input::-webkit-clear-button { -webkit-appearance: none;margin: 0; }
-label { display: flex;margin: 0 8px; }
-label input { margin: 0 4px; }
+label, input { display: inline-block; }
+label { margin: 0 4px; }
+label input { margin: 0 2px; }
 [xs] { font-size: 9px; }
+
+.drawer .slot {padding: 20px; }
+.drawer h3 { text-align: center;margin: 20px; }
+.drawer button { margin: 5px 20px 0 auto; }
 
 .cmd { position: relative; }
 .cmd [tt] { position: inherit; }
-.cmd.new, .cmd.edit { padding: 10px; }
-.cmd.highlight { background: var(--highlight); }
+.cmd.new { padding: 10px; }
+.cmd.highlight { background: var(--highlight)!important; }
 .cmd.header { background: #e0eaff;font-weight: 700; }
 .cmd.header > * { padding: 10px; }
 .cmd.item:nth-child(odd) { background: rgba(0, 0, 0, .03); }
@@ -66,51 +74,65 @@ label input { margin: 0 4px; }
         <input type="text" name="command" placeholder="Command" required></input>
         <button>ADD</button>
       </form>
-      <form class="cmd edit" @submit.prevent="edit(commands[highlight].id, $event.target)" v-show="highlight">
-        <label>Run Every<input type="number" name="hours" min="1" @input="hours2schedule"></input>(H)</label>
-        <label>Or Schedule<input type="text" name="schedule" placeholder="R[num]/[date]/PT[incr]"></input></label>
-        <label>Run After<input type="text" name="runhook" placeholder="#1"></input></label>
-        <label>On Success<input type="text" name="onsuccess" placeholder="Command ✓"></input></label>
-        <label>On Error<input type="text" name="onerror" placeholder="Command ✗"></input></label>
-        <button type="button" @click="del(commands[highlight].id)">DEL</button>
-        <button>SAVE</button>
-      </form>
       <div class="cmd header" row>
         <div>ID</div>
         <div f1>Command</div>
         <div class="day" row center>{{ day }}</div>
       </div>
-      <div class="cmd item" :class="{ highlight: highlight === command.id }" row v-for="command in commands" @click="highlight = highlight === command.id ? null : command.id">
-        <div>{{ command.id.replace('C', '#') }}</div>
-        <div f1>{{ command.command.replace(/['"]/g, '').split(' ').map(w => w.split(/(\\|\/)/).last()).join(' ') }}</div>
-        <div><span v-if="command.nextrun">{{ nexttime(command) }}</span></div>
-        <div>
+      <div class="cmd item" row v-for="command in commands">
+        <div row center>{{ command.id.replace('C', '#') }}</div>
+        <div f1 row center left tt="Click to Edit" @click="popup_edit = command">{{ command.command.replace(/['"]/g, '').split(' ').map(w => w.split(/(\\|\/)/).last()).join(' ') }}</div>
+        <div row center><span v-if="command.nextrun">{{ nexttime(command) }}</span></div>
+        <div row center>
+          <button type="button" @click="del(command.id)">DEL</button>
           <button @click="kill(command.id)" v-if="command.run">KILL</button>
           <button @click="run(command.id)">RUN</button>
         </div>
-        <div class="day" row center>
+        <div class="day" row center tt="Click to See Logs" @click="popup_logs = command">
           <div class="cells" column v-for="hours_x2 in 12">
             <div class="cell" :class="day === new Date().iso().slice(0, 10) && hours_x2 * 2 > new Date().iso().slice(11, 13) && 'future'" v-if="!command.runs || command.runs.filter(d => Math.trunc(d.start.slice(11, 13) / 2) === hours_x2).length === 0"></div>
-            <div class="cell" :class="run.error ? 'negative' : 'positive'" :tt="JSON.stringify(run)" v-for="run in command.runs.filter(d => Math.trunc(d.start.slice(11, 13) / 2) === hours_x2)" v-else></div>
-            <div class="cell running" :tt="JSON.stringify(command.run)" v-if="command.run && command.run.start.slice(0, 10) === day && Math.trunc(command.run.start.slice(11, 13) / 2) === hours_x2"></div>
+            <div class="cell" :class="run.error ? 'negative' : 'positive'" v-for="run in command.runs.filter(d => Math.trunc(d.start.slice(11, 13) / 2) === hours_x2)" v-else></div>
+            <div class="cell running" v-if="command.run && command.run.start.slice(0, 10) === day && Math.trunc(command.run.start.slice(11, 13) / 2) === hours_x2"></div>
           </div>
         </div>
       </div>
     </div>
   </section>
+  <drawer @close="popup_edit = null" :openned="!!popup_edit">
+    <form class="cmd edit" column @submit.prevent="edit(popup_edit.id, $event.target)">
+      <h3>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} - Edit</h3>
+      <label>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} will run every time Task #<input type="text" name="runhook"></input> succeeds.</label>
+      <hr>
+      <label>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} will run on schedule at: <input type="text" name="schedule" @focus="!$event.target.value && ($event.target.value = 'R/' + new Date().iso().slice(0, 13) + ':00/PT1H')"></input></label>
+      <hr>
+      <label>If Task {{ popup_edit && popup_edit.id.replace('C', '#') }} succeeds, run: <input type="text" name="onsuccess"></input></label>
+      <hr>
+      <label>If Task {{ popup_edit && popup_edit.id.replace('C', '#') }} fails, run: <input type="text" name="onerror"></input></label>
+      <button>SAVE</button>
+    </form>
+  </drawer>
+  <drawer @close="popup_logs = null" :openned="!!popup_logs">
+    <form class="cmd logs" column @submit.prevent="logs(popup_logs.id, $event.target)">
+      <h3>Task {{ popup_logs && popup_logs.id.replace('C', '#') }} - Logs</h3>
+      <div v-for="run, index in popup_logs && popup_logs.runs">
+        {{ run.error ? '✗' : '✓' }} - {{ (index + 1).ordinalize() }} run started at {{ run.start.slice(0, 16) }} for {{ run.duration.duration() }} with output {{ run.stdout || run.stderr || run.err || 'null' }}.
+      </div>
+    </form>
+  </drawer>
 </main>
 </template>
 
 <script>
 import axios from 'axios'
 import Sugar from 'sugar'
+import Drawer from './Drawer.vue'
 import Kpi from './Kpi.vue'
 import Timer from './Timer.vue'
 Sugar.extend({ objectPrototype: true })
-const API = 'http://127.0.0.1:1337/127.0.0.1:1111/api/'
+const API = 'api/'
 
 export default {
-  components: { Kpi, Timer },
+  components: { Drawer, Kpi, Timer },
   data() {
     this.list()
     return {
@@ -119,7 +141,8 @@ export default {
       commands: {},
       machine: null,
       notify: null,
-      highlight: null,
+      popup_edit: null,
+      popup_logs: null,
     }
   },
   computed: {
@@ -140,10 +163,6 @@ export default {
     },
   },
   methods: {
-    reset() {
-      this.list()
-      this.highlight = false
-    },
     list() {
       axios.get(API).then(res => {
         this.counter = res.data.counter
@@ -152,13 +171,17 @@ export default {
         this.notify = res.data.notify
       })
     },
+    reset() {
+      this.list()
+      this.popup_edit = null
+    },
     add(form) {
-      axios.post(API, { command: form.command.value }).then(this.reset)
+      axios.post(API, { command: form.command.value }).then(this.reset).then(() => form.command.value = '')
     },
     edit(id, form) {
       const data = {
         schedule: form.schedule.value,
-        runhook: form.runhook.value.replace('#', 'C'),
+        runhook: 'C' + form.runhook.value,
         onsuccess: form.onsuccess.value,
         onerror: form.onerror.value,
       }
@@ -182,16 +205,12 @@ export default {
       if (day === new Date().advance('1 day').iso().slice(0, 10)) day = 'Tomorrow'
       return day + ' at ' + cmd.nextrun.slice(11, 16)
     },
-    hours2schedule($event) {
-      document.querySelector('input[name="schedule"]').value = 'R/' + new Date().iso().slice(0, 13) + ':00/PT' + $event.target.value + 'H'
-    },
   },
   watch: {
-    highlight() {
-      const cmd = this.commands[this.highlight] || {}
-      document.querySelector('input[name="hours"]').value = null
+    popup_edit() {
+      const cmd = this.popup_edit || {}
       document.querySelector('input[name="schedule"]').value = cmd.schedule || ''
-      document.querySelector('input[name="runhook"]').value = (cmd.runhook || '').replace('C', '#')
+      document.querySelector('input[name="runhook"]').value = (cmd.runhook || '').slice(1)
       document.querySelector('input[name="onsuccess"]').value = cmd.onsuccess || ''
       document.querySelector('input[name="onerror"]').value = cmd.onerror || ''
     }
