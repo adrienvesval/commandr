@@ -32,6 +32,11 @@ label input { margin: 0 2px; }
 .drawer h3 { text-align: center;margin: 20px; }
 .drawer button { margin: 5px 20px 0 auto; }
 
+.header .day { position: relative; }
+.header .day button { position: absolute;top: 0;height: 100%;background: none;border: none;cursor: pointer; }
+.header .day button:first-child { left: 0; }
+.header .day button:last-child { right: 0; }
+
 .cmd { position: relative; }
 .cmd [tt] { position: inherit; }
 .cmd.new { padding: 10px; }
@@ -62,9 +67,9 @@ label input { margin: 0 2px; }
     <div class="kpi-timer" row center around>
       <span column>
         <span>Next Run</span>
-        <span style="font-weight: 700;font-size: 18px;line-height: 18px;">{{ next.command && next.command.replace(/['"]/g, '').split(' ').map(w => w.split(/(\\|\/)/).last()).join(' ') }}</span>
+        <span style="font-weight: 700;font-size: 18px;line-height: 18px;">{{ nextcmd.command && nextcmd.id.replace('C', '#') + ': ' + simplify(nextcmd.command) }}</span>
       </span>
-      <timer :time="next.nextrun" @time="list"></timer>
+      <timer :time="nextcmd.nextrun" @time="list"></timer>
     </div>
   </section>
   <section>
@@ -77,21 +82,25 @@ label input { margin: 0 2px; }
       <div class="cmd header" row>
         <div>ID</div>
         <div f1>Command</div>
-        <div class="day" row center>{{ day }}</div>
+        <div class="day" row center>
+          <button @click="prev"><</button>
+          {{ day }}
+          <button @click="next">></button>
+        </div>
       </div>
       <div class="cmd item" row v-for="command in commands">
         <div row center>{{ command.id.replace('C', '#') }}</div>
-        <div f1 row center left tt="Click to Edit" @click="popup_edit = command">{{ command.command.replace(/['"]/g, '').split(' ').map(w => w.split(/(\\|\/)/).last()).join(' ') }}</div>
+        <div f1 row center left tt="Click to Edit" @click="popup_edit = command">{{ command.command }}</div>
         <div row center><span v-if="command.nextrun">{{ nexttime(command) }}</span></div>
         <div row center>
-          <button type="button" @click="del(command.id)">DEL</button>
+          <button @click="del(command.id)">DEL</button>
           <button @click="kill(command.id)" v-if="command.run">KILL</button>
-          <button @click="run(command.id)">RUN</button>
+          <button @click="run(command.id)" v-if="!command.run">RUN</button>
         </div>
         <div class="day" row center tt="Click to See Logs" @click="popup_logs = command">
           <div class="cells" column v-for="hours_x2 in 12">
-            <div class="cell" :class="day === new Date().iso().slice(0, 10) && hours_x2 * 2 > new Date().iso().slice(11, 13) && 'future'" v-if="!command.runs || command.runs.filter(d => Math.trunc(d.start.slice(11, 13) / 2) === hours_x2).length === 0"></div>
-            <div class="cell" :class="run.error ? 'negative' : 'positive'" v-for="run in command.runs.filter(d => Math.trunc(d.start.slice(11, 13) / 2) === hours_x2)" v-else></div>
+            <div class="cell" :class="(day > new Date().iso().slice(0, 10) || (day === new Date().iso().slice(0, 10) && hours_x2 * 2 > new Date().iso().slice(11, 13))) && 'future'" v-if="!command.runs || command.runs.filter(d => d.start.slice(0, 10) === day && Math.trunc(d.start.slice(11, 13) / 2) === hours_x2).length === 0"></div>
+            <div class="cell" :class="run.error ? 'negative' : 'positive'" v-for="run in command.runs.filter(d => d.start.slice(0, 10) === day && Math.trunc(d.start.slice(11, 13) / 2) === hours_x2)" v-else></div>
             <div class="cell running" v-if="command.run && command.run.start.slice(0, 10) === day && Math.trunc(command.run.start.slice(11, 13) / 2) === hours_x2"></div>
           </div>
         </div>
@@ -103,7 +112,7 @@ label input { margin: 0 2px; }
       <h3>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} - Edit</h3>
       <label>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} will run every time Task #<input type="text" name="runhook"></input> succeeds.</label>
       <hr>
-      <label>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} will run on schedule at: <input type="text" name="schedule" @focus="!$event.target.value && ($event.target.value = 'R/' + new Date().iso().slice(0, 13) + ':00/PT1H')"></input></label>
+      <label>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} will run on schedule at: <input type="text" name="schedule" @focus="!$event.target.value && ($event.target.value = 'R/' + new Date().iso().slice(0, 13) + ':00/PT24H')"></input></label>
       <hr>
       <label>If Task {{ popup_edit && popup_edit.id.replace('C', '#') }} succeeds, run: <input type="text" name="onsuccess"></input></label>
       <hr>
@@ -146,7 +155,7 @@ export default {
     }
   },
   computed: {
-    next() {
+    nextcmd() {
       return this.commands.values().filter(d => d.nextrun).min(d => d.nextrun) || {}
     },
     running() {
@@ -204,6 +213,16 @@ export default {
       if (day === new Date().iso().slice(0, 10)) day = 'Today'
       if (day === new Date().advance('1 day').iso().slice(0, 10)) day = 'Tomorrow'
       return day + ' at ' + cmd.nextrun.slice(11, 16)
+    },
+    simplify(cmd) {
+      if (!/(\\|\/)/.test(cmd)) return cmd
+      return cmd.replace(/['"]/g, '').split(' ').last().split(/(\\|\/)/).last()
+    },
+    prev() {
+      this.day = new Date(this.day).rewind('1 day').iso().slice(0, 10)
+    },
+    next() {
+      this.day = new Date(this.day).advance('1 day').iso().slice(0, 10)
     },
   },
   watch: {

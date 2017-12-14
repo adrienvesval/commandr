@@ -51,6 +51,9 @@ const path = require('path')
 const { spawn } = require('child_process')
 const exec = cmd => {
   if (!cmd) return
+  const cwd = /(\\|\/)/.test(cmd)
+    ? cmd.replace(/['"]/g, '').split(' ').filter(w => /(\\|\/)/.test(w)).last().replace(/[^/^\\]*$/, '')
+    : null
   const program = cmd.split(' ')[0]
   const args = cmd.split(' ').slice(1)
   const child = spawn(program, args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
