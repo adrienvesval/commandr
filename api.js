@@ -39,7 +39,8 @@ const template = (cmd, status) => {
     <li>Start on: ${os.hostname()} - ${os.platform()} - ${os.arch()}</li>
     <li>At: ${cmd.run.start}</li>
     <li>In: ${cmd.run.duration.duration()}</li>
-    <li>Next: ${cmd.nextrun}</li>
+    <li>Next: ${cmd.nextrun && new Date(cmd.nextrun).iso().slice(0, 16) || 'never'}</li>
+    <li>Output: ${cmd.stdout || cmd.stderr || cmd.err || 'null'}</li>
   </ul>`
   return email(subject, content)
 }
@@ -56,7 +57,7 @@ const exec = cmd => {
     : null
   const program = cmd.split(' ')[0]
   const args = cmd.split(' ').slice(1)
-  const child = spawn(program, args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
+  const child = spawn(program, args, { shell: true, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
   child.unref()
   return child
 }
