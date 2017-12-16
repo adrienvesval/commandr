@@ -110,6 +110,8 @@ label input { margin: 0 2px; }
   <drawer @close="popup_edit = null" :openned="!!popup_edit">
     <form class="cmd edit" column @submit.prevent="edit(popup_edit.id, $event.target)">
       <h3>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} - Edit</h3>
+      <label>Command: <input type="text" name="command" required></input></label>
+      <hr>
       <label>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} will run every time Task #<input type="text" name="runhook"></input> succeeds.</label>
       <hr>
       <label>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} will run on schedule at: <input type="text" name="schedule" @focus="!$event.target.value && ($event.target.value = 'R/' + new Date().iso().slice(0, 13) + ':00/PT24H')"></input></label>
@@ -209,10 +211,10 @@ export default {
       confirm('Delete ' + this.commands[id].command + '?') && axios.delete(API + id).then(this.reset)
     },
     nexttime(cmd) {
-      let day = cmd.nextrun.slice(0, 10)
-      if (day === new Date().iso().slice(0, 10)) day = 'Today'
-      if (day === new Date().advance('1 day').iso().slice(0, 10)) day = 'Tomorrow'
-      return day + ' at ' + cmd.nextrun.slice(11, 16)
+      const next = new Date(cmd.nextrun)
+      if (next.isToday()) return 'Today at ' + next.format('%X')
+      if (next.isTomorrow()) return 'Tomorrow at ' + next.format('%X')
+      return next.relative()
     },
     simplify(cmd) {
       if (!/(\\|\/)/.test(cmd)) return cmd
@@ -228,6 +230,7 @@ export default {
   watch: {
     popup_edit() {
       const cmd = this.popup_edit || {}
+      document.querySelector('form.edit input[name="command"]').value = cmd.command
       document.querySelector('input[name="schedule"]').value = cmd.schedule || ''
       document.querySelector('input[name="runhook"]').value = (cmd.runhook || '').slice(1)
       document.querySelector('input[name="onsuccess"]').value = cmd.onsuccess || ''

@@ -1,10 +1,9 @@
 const express = require('express')
 const app = express()
-const morgan = require('morgan')
 
 app.use(express.static('app/dist'))
 app.use(express.json())
-app.use(morgan(':method :url :status :response-time ms - :date[iso]'))
+// TODO: logger - ':method :url :status :response-time ms - :date[iso]'
 
 const axios = require('axios')
 const email = (subject, content) => process.env.SENDGRID_API_KEY && axios({
@@ -31,16 +30,17 @@ const email = (subject, content) => process.env.SENDGRID_API_KEY && axios({
   },
 })
 const template = (cmd, status) => {
+  if (!cmd.run) return email('✗ Command Scheduling Error', JSON.stringify(cmd)) // TODO: catch this error
   const symbol = status === 'success' ? '✓' : '✗'
   const subject = `${symbol} Command ${status} - ${cmd.command}`
   const content = `<ul>
     <li>Command: ${cmd.command}</li>
     <li>Status: ${status}</li>
     <li>Start on: ${os.hostname()} - ${os.platform()} - ${os.arch()}</li>
-    <li>At: ${cmd.run.start}</li>
-    <li>In: ${cmd.run.duration.duration()}</li>
-    <li>Next: ${cmd.nextrun && new Date(cmd.nextrun).iso().slice(0, 16) || 'never'}</li>
-    <li>Output: ${cmd.stdout || cmd.stderr || cmd.err || 'null'}</li>
+    <li>Start At: ${cmd.run.start.slice(0, 16) + 'Z'}</li>
+    <li>Duration: ${cmd.run.duration.duration()}</li>
+    <li>Next Schedule: ${cmd.nextrun && new Date(cmd.nextrun).iso().slice(0, 16) + 'Z' || 'never'}</li>
+    <li>Output: <code><pre>${[cmd.run.stdout, cmd.run.stderr, cmd.run.err].filter(x => x).join(' // ') || 'null'}</pre></code></li>
   </ul>`
   return email(subject, content)
 }
@@ -140,6 +140,7 @@ const update_timer = () => {
     cmds.map(run)
   }, nextrun - new Date())
 }
+commands.map(cmd => delete cmd.run) // NOTE: We lose track of running command on restart
 update_timer()
 
 // List all commands and all runs
@@ -163,7 +164,8 @@ app.post('/api', (req, res) => {
 app.put('/api/:id', (req, res) => {
   if (!/127.0.0.1/.test(req.ip)) return res.status(401).send('unauthorized_remote_action')
   if (!commands[req.params.id]) return res.status(404).send('command_not_found')
-  const { schedule, runhook, onsuccess, onerror } = req.body
+  const { command, schedule, runhook, onsuccess, onerror } = req.body
+  commands[req.params.id].command = command
   commands[req.params.id].schedule = schedule
   commands[req.params.id].runhook = runhook
   commands[req.params.id].onsuccess = onsuccess
