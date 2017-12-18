@@ -191,6 +191,7 @@ export default {
     },
     edit(id, form) {
       const data = {
+        command: form.command.value,
         schedule: form.schedule.value,
         runhook: 'C' + form.runhook.value,
         onsuccess: form.onsuccess.value,

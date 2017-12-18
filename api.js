@@ -117,7 +117,7 @@ const close = (cmd, code) => {
   update_timer()
 }
 const run = cmd => {
-  if (!cmd) return
+  if (!cmd || !cmd.command) return
   delete cmd.skip
   if (cmd.run && running(cmd.run.pid)) return template(cmd, 'skip')
   if (!cmd.runs) cmd.runs = []
