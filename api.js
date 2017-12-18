@@ -30,14 +30,14 @@ const email = (subject, content) => process.env.SENDGRID_API_KEY && axios({
   },
 })
 const template = (cmd, status) => {
-  if (!cmd.run) return email('✗ Command Scheduling Error', JSON.stringify(cmd)) // TODO: catch this error
+  if (!cmd.run || !cmd.run.duration) return email('✗ Command Scheduling Error', JSON.stringify(cmd)) // TODO: catch this error
   const symbol = status === 'success' ? '✓' : '✗'
   const subject = `${symbol} Command ${status} - ${cmd.command}`
   const content = `<ul>
     <li>Command: ${cmd.command}</li>
     <li>Status: ${status}</li>
     <li>Start on: ${os.hostname()} - ${os.platform()} - ${os.arch()}</li>
-    <li>Start At: ${cmd.run.start.slice(0, 16) + 'Z'}</li>
+    <li>Start At: ${new Date(cmd.run.start).iso().slice(0, 16) + 'Z'}</li>
     <li>Duration: ${cmd.run.duration.duration()}</li>
     <li>Next Schedule: ${cmd.nextrun && new Date(cmd.nextrun).iso().slice(0, 16) + 'Z' || 'never'}</li>
     <li>Output: <code><pre>${[cmd.run.stdout, cmd.run.stderr, cmd.run.err].filter(x => x).join(' // ') || 'null'}</pre></code></li>
@@ -52,9 +52,6 @@ const path = require('path')
 const { spawn } = require('child_process')
 const exec = cmd => {
   if (!cmd) return
-  const cwd = /(\\|\/)/.test(cmd)
-    ? cmd.replace(/['"]/g, '').split(' ').filter(w => /(\\|\/)/.test(w)).last().replace(/[^/^\\]*$/, '')
-    : null
   const program = cmd.split(' ')[0]
   const args = cmd.split(' ').slice(1)
   const child = spawn(program, args, { shell: true, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
