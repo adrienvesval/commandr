@@ -1,6 +1,6 @@
 {
   "name": "command-r",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Command scheduler",
   "preferGlobal": true,
   "bin": {

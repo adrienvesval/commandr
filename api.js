@@ -29,10 +29,14 @@ const email = (subject, content) => process.env.SENDGRID_API_KEY && axios({
     }]
   },
 })
+const simplify = cmd => {
+  if (!/(\\|\/)/.test(cmd)) return cmd
+  return cmd.replace(/['"]/g, '').split(' ').last().split(/(\\|\/)/).last()
+}
 const template = (cmd, status) => {
-  if (!cmd.run || !cmd.run.duration) return email('✗ Command Scheduling Error', JSON.stringify(cmd)) // TODO: catch this error
+  if (!cmd.run || !cmd.run.duration) return cmd.run && cmd.run.start && (new Date() - new Date(cmd.run.start) < 10000) || email('✗ Command Scheduling Error', JSON.stringify(cmd))
   const symbol = status === 'success' ? '✓' : '✗'
-  const subject = `${symbol} Command ${status} - ${cmd.command}`
+  const subject = `${symbol} Command ${status} - ${simplify(cmd.command)}`
   const content = `<ul>
     <li>Command: ${cmd.command}</li>
     <li>Status: ${status}</li>
