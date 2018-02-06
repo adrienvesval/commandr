@@ -1,5 +1,5 @@
 <style>
-@import 'https://rawcss.com/raw.css';
+@import url('https://rawcss.com/raw.css');
 @import url('https://fonts.googleapis.com/css?family=Lato:100,300,400,900');
 .hack {}
 :root { --background-1: #f1f4f9;--box-shadow: 0 3px 10.5px 0 rgba(74, 105, 160, 0.16); }

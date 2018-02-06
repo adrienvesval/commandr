@@ -1,15 +1,54 @@
 {
   "name": "command-r",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Command scheduler",
   "preferGlobal": true,
   "bin": {
     "vmake": "bin/command-r"
   },
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "lint": "vue-cli-service lint"
+  },
   "dependencies": {
-    "axios": "*",
+    "axios": "~0.17",
     "commander": "~2",
     "express": "~4",
-    "sugar": "~2"
-  }
+    "sugar": "~2",
+    "vue": "~2"
+  },
+  "devDependencies": {
+    "@vue/cli-plugin-babel": "^3.0.0-alpha.8",
+    "@vue/cli-service": "^3.0.0-alpha.8",
+    "vue-template-compiler": "^2.5.13"
+  },
+  "vue": {
+    "lintOnSave": true
+  },
+  "babel": {
+    "presets": [
+      "@vue/app"
+    ]
+  },
+  "prettier": {
+    "printWidth": 240,
+    "semi": false,
+    "singleQuote": true,
+    "trailingComma": "all"
+  },
+  "eslintConfig": {
+    "extends": [
+      "plugin:vue/essential",
+      "@vue/prettier"
+    ]
+  },
+  "postcss": {
+    "plugins": {
+      "autoprefixer": {}
+    }
+  },
+  "browserslist": [
+    "last 2 versions"
+  ]
 }

@@ -1,0 +1,90 @@
+<style>
+.frame { padding: 0!important;background: none!important;box-shadow: none!important;overflow: auto; }
+.frame > div { min-width: fit-content;background: var(--background);box-shadow: var(--box-shadow);margin: 2px auto; }
+.lines { overflow-y: auto;font-size: 70%;font-weight: 500; }
+.header { min-height: 50px;font-weight: 500;box-shadow: var(--box-shadow);background: rgba(255, 221, 0, .2); }
+.search, .line { min-height: 35px; }
+.line:hover .cell, .cell.highlight { background: rgba(255, 221, 0, .1); }
+.line .cell.active { background: rgba(255, 221, 0, .4); }
+.cell { min-width: 100px;max-width: 100px;padding: 5px 10px;white-space: nowrap;overflow: auto; }
+.cell:hover { cursor: pointer;outline: 1px solid #fd4;outline-offset: -1px; }
+.cell.sort-asc::after { content: '\25B3';color: var(--primary);margin-left: 4px; }
+.cell.sort-desc::after { content: '\25BD';color: var(--primary);margin-left: 4px; }
+.frame input { margin: 0!important;padding: 8px!important;padding-right: 0!important; }
+[name="limit"], [name="length"] { max-width: 50px; }
+.frame .cell:first-child { max-width: inherit;flex: 1;justify-content: flex-start; }
+.frame .more { position: absolute;height: 50px;padding: 12px;background: #fd4; }
+.frame .more.open { top: 52px; }
+.frame:not(.less) .header .cell:first-child { padding-left: 40px; }
+.frame.less .more { display: none; }
+.cell { -ms-overflow-style: none; }
+.cell { overflow: -moz-scrollbars-none; }
+.cell::-webkit-scrollbar { display: none; }
+.lines { -ms-overflow-style: none; }
+.lines { overflow: -moz-scrollbars-none; }
+.lines::-webkit-scrollbar { display: none; }
+</style>
+
+<template>
+<div class="frame" v-if="data">
+  <div column>
+    <div class="more" :class="{ open: more }" @click="more = !more">+</div>
+    <div row class="search" v-if="more">
+      <input name="search" type="text" v-model="search" placeholder="Search" v-focus />
+      <input name="limit" type="number" v-model="limit" min="1" />
+      <input name="length" type="text" :value="lines.length" disabled />
+    </div>
+    <div row class="header" v-if="metadata">
+      <div row center left
+        :class="['cell', highlight === index && 'highlight', sort === index && (desc ? 'sort-desc' : 'sort-asc')]"
+        v-html="t[meta[0]] || meta[0]" v-for="meta, index in metadata"
+        @mouseover="highlight = index" @mouseout="highlight = null"
+        @click="click(index)"></div>
+    </div>
+    <div class="lines">
+      <div row class="line" v-for="line in lines.slice(0, limit)">
+        <div row center left
+          :class="['cell', highlight === index && 'highlight', line[0] === $route.query.line && 'active']"
+          v-html="format(index, line)" v-for="cell, index in line"
+          @click="click(index, line)"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</template>
+
+<script>
+export default {
+  props: ['data', 'metadata'],
+  data() {
+    return {
+      search: null,
+      limit: 50,
+      highlight: null,
+      sort: 0,
+      desc: false,
+      more: false,
+    }
+  },
+  computed: {
+    lines() {
+      let data = this.data
+      if (this.search) data = data.filter(d => d.some(v => new RegExp(this.search, 'i').test(v)))
+      return data.sortBy(this.sort, this.desc)
+    },
+  },
+  methods: {
+    click(index, line) {
+      if (!line) {
+        this.desc = index === this.sort ? !this.desc : true
+        this.sort = index
+      }
+      this.$emit('lineclick', { index, line })
+    },
+    format(index, line) {
+      try { return format(this.metadata[index][1])(line[index]) }
+      catch (e) { return this.t[line[index]] || line[index] }
+    },
+  },
+}
+</script>

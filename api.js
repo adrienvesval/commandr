@@ -1,7 +1,12 @@
 const express = require('express')
 const app = express()
 
-app.use(express.static('app/dist'))
+if (process.env.ENV === 'dev') app.use((req, res, next) => {
+  if (/^\/api/.test(req.url)) return next()
+  return require('axios').get('http://127.0.0.1:8080' + req.url).then(r => res.send(r.data)).catch(err => console.error('Proxy Error', req.url))
+})
+if (process.env.ENV !== 'dev') app.use(express.static('dist'))
+
 app.use(express.json())
 // TODO: logger - ':method :url :status :response-time ms - :date[iso]'
 
@@ -58,7 +63,7 @@ const exec = cmd => {
   if (!cmd) return
   const program = cmd.split(' ')[0]
   const args = cmd.split(' ').slice(1)
-  const child = spawn(program, args, { shell: true, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
+  const child = spawn(program, args)
   child.unref()
   return child
 }
