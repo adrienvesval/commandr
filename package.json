@@ -2,10 +2,10 @@
   "name": "command-r",
   "version": "1.0.1",
   "description": "Command scheduler",
-  "preferGlobal": true,
   "bin": {
-    "vmake": "bin/command-r"
+    "command-r": "bin/command-r"
   },
+  "preferGlobal": true,
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
@@ -20,15 +20,21 @@
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^3.0.0-alpha.8",
+    "@vue/cli-plugin-eslint": "^3.0.0-alpha.8",
     "@vue/cli-service": "^3.0.0-alpha.8",
+    "@vue/eslint-config-prettier": "^3.0.0-alpha.8",
+    "lint-staged": "^6.0.0",
     "vue-template-compiler": "^2.5.13"
-  },
-  "vue": {
-    "lintOnSave": true
   },
   "babel": {
     "presets": [
       "@vue/app"
+    ]
+  },
+  "eslintConfig": {
+    "extends": [
+      "plugin:vue/essential",
+      "@vue/prettier"
     ]
   },
   "prettier": {
@@ -37,12 +43,6 @@
     "singleQuote": true,
     "trailingComma": "all"
   },
-  "eslintConfig": {
-    "extends": [
-      "plugin:vue/essential",
-      "@vue/prettier"
-    ]
-  },
   "postcss": {
     "plugins": {
       "autoprefixer": {}
@@ -50,5 +50,18 @@
   },
   "browserslist": [
     "last 2 versions"
-  ]
+  ],
+  "gitHooks": {
+    "pre-commit": "lint-staged"
+  },
+  "lint-staged": {
+    "*.js": [
+      "vue-cli-service lint",
+      "git add"
+    ],
+    "*.vue": [
+      "vue-cli-service lint",
+      "git add"
+    ]
+  }
 }

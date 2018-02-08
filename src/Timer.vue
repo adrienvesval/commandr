@@ -16,7 +16,7 @@
 }
 
 .vue-timer li:after {
-  content: ":";
+  content: ':';
   position: absolute;
   top: -8px;
   right: -13px;
@@ -32,7 +32,7 @@
 }
 
 .vue-timer li:last-of-type:after {
-  content: "";
+  content: '';
 }
 
 .vue-timer .digit {
@@ -82,14 +82,14 @@ export default {
       return this.two(this.diff % 60)
     },
     minutes() {
-      return this.two(this.diff / 60 % 60)
+      return this.two((this.diff / 60) % 60)
     },
     hours() {
-      return this.two(this.diff / 60 / 60 % 24)
+      return this.two((this.diff / 60 / 60) % 24)
     },
     days() {
       return this.two(this.diff / 60 / 60 / 24)
-    }
+    },
   },
   methods: {
     two(num) {
@@ -100,7 +100,7 @@ export default {
   },
   mounted() {
     setInterval(() => {
-      if (!this.time) return this.diff = 0
+      if (!this.time) return (this.diff = 0)
       this.diff = Math.abs((new Date(this.time) - new Date()) / 1000)
       if (Math.trunc(this.diff) === 0) this.$emit('time')
     }, 1000)

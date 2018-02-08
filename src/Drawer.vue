@@ -6,7 +6,7 @@
   left: 0;
   min-width: 100vw;
   min-height: 100vh;
-  background: rgba(0, 0, 0, .5);
+  background: rgba(0, 0, 0, 0.5);
   cursor: pointer;
 }
 
@@ -30,7 +30,7 @@
   width: 40px;
   height: 40px;
   padding: 10px;
-  background: rgba(0, 0, 0, .5);
+  background: rgba(0, 0, 0, 0.5);
   cursor: pointer;
 }
 
@@ -42,25 +42,83 @@
   }
 }
 
-:root { --transition: all .3s cubic-bezier(.4, .0, .2, 1);--standard-curve: cubic-bezier(.4, .0, .2, 1); }
-.fade-enter-active, .fade-leave-active { opacity: 1;transition: var(--transition); }
-.fade-enter, .fade-leave-active { opacity: 0; }
-.slide-top-enter-active { animation: enter-top .3s var(--standard-curve); }
-.slide-top-leave-active { animation: leave-top .3s var(--standard-curve); }
-.slide-right-enter-active { animation: enter-right .3s var(--standard-curve); }
-.slide-right-leave-active { animation: leave-right .3s var(--standard-curve); }
-.slide-bottom-enter-active { animation: enter-bottom .3s var(--standard-curve); }
-.slide-bottom-leave-active { animation: leave-bottom .3s var(--standard-curve); }
-.slide-left-enter-active { animation: enter-left .3s var(--standard-curve); }
-.slide-left-leave-active { animation: leave-left .3s var(--standard-curve); }
-@keyframes enter-top { from { transform: translateY(-100%); } }
-@keyframes leave-top { to { transform: translateY(-100%); } }
-@keyframes enter-right { from { transform: translateX(100%); } }
-@keyframes leave-right { to { transform: translateX(100%); } }
-@keyframes enter-bottom { from { transform: translateY(100%); } }
-@keyframes leave-bottom { to { transform: translateY(100%); } }
-@keyframes enter-left { from { transform: translateX(-100%); } }
-@keyframes leave-left { to { transform: translateX(-100%); } }
+:root {
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --standard-curve: cubic-bezier(0.4, 0, 0.2, 1);
+}
+.fade-enter-active,
+.fade-leave-active {
+  opacity: 1;
+  transition: var(--transition);
+}
+.fade-enter,
+.fade-leave-active {
+  opacity: 0;
+}
+.slide-top-enter-active {
+  animation: enter-top 0.3s var(--standard-curve);
+}
+.slide-top-leave-active {
+  animation: leave-top 0.3s var(--standard-curve);
+}
+.slide-right-enter-active {
+  animation: enter-right 0.3s var(--standard-curve);
+}
+.slide-right-leave-active {
+  animation: leave-right 0.3s var(--standard-curve);
+}
+.slide-bottom-enter-active {
+  animation: enter-bottom 0.3s var(--standard-curve);
+}
+.slide-bottom-leave-active {
+  animation: leave-bottom 0.3s var(--standard-curve);
+}
+.slide-left-enter-active {
+  animation: enter-left 0.3s var(--standard-curve);
+}
+.slide-left-leave-active {
+  animation: leave-left 0.3s var(--standard-curve);
+}
+@keyframes enter-top {
+  from {
+    transform: translateY(-100%);
+  }
+}
+@keyframes leave-top {
+  to {
+    transform: translateY(-100%);
+  }
+}
+@keyframes enter-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes leave-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes enter-bottom {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes leave-bottom {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes enter-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes leave-left {
+  to {
+    transform: translateX(-100%);
+  }
+}
 </style>
 
 <template>

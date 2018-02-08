@@ -1,7 +1,7 @@
 <style>
 .unit {
-  opacity: .5;
-  margin-left: -.2em;
+  opacity: 0.5;
+  margin-left: -0.2em;
 }
 
 .unit:empty {
@@ -19,8 +19,8 @@
 .kpi,
 .kpi > div {
   display: flex;
-  flex-direction: row!important;
-  flex-wrap: wrap!important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
 }
 
 .kpi {
@@ -62,7 +62,7 @@
   color: var(--primary);
 }
 
-.kpi-2 > div:nth-child(n+2) {
+.kpi-2 > div:nth-child(n + 2) {
   color: #bbb;
 }
 
@@ -78,18 +78,18 @@
   flex: 1;
 }
 
-.kpi-3 > div:nth-child(n+2) {
+.kpi-3 > div:nth-child(n + 2) {
   width: 50px;
   font-size: 10px;
   text-transform: uppercase;
 }
 
-.kpi-3 > div:nth-child(n+3) > * {
+.kpi-3 > div:nth-child(n + 3) > * {
   width: 50px;
   text-align: right;
 }
 
-.kpi-3 > div:nth-child(n+2) .title {
+.kpi-3 > div:nth-child(n + 2) .title {
   min-width: 100%;
   color: #bbb;
 }
@@ -118,6 +118,6 @@ export default {
       if (number === unit) unit = ''
       return { number, unit }
     },
-  }
+  },
 }
 </script>
