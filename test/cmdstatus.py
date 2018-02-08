@@ -13,27 +13,24 @@ def crash():
 
 rand = random.random()
 if (rand > .75):
-  print('CASE 1 - CRASH')
   case = 1
+  casemsg = 'CASE 1 - CRASH'
 
 if (rand > .5 and rand <= .75):
-  print('CASE 2 - ERROR')
   case = 2
+  casemsg = 'CASE 2 - ERROR'
 
 if (rand <= .5):
-  print('CASE 3 - SUCCESS')
   case = 3
+  casemsg = 'CASE 3 - SUCCESS'
 
+log = str(os.getpid()) + ' - CASE ' + casemsg + ' - ' + \
+    datetime.datetime.utcnow().isoformat() + '\n'
 
-################## FORCE
-case = 1
-################## FORCE
+with open('test\\cmdstatus.txt', 'a') as f:
+  f.write('CRON START - ' + log)
 
-
-with open('C:\\Users\\vbrajon\\100m\\command-r\\cmdstatus.txt', 'a') as f:
-    f.write('CRON START - ' + str(os.getpid()) + ' - CASE ' + str(case) + ' - ' + datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat() + '\n')
-
-print('CRON START')
+print('CRON START - ' + log)
 time.sleep(1)
 
 if (case == 1):
@@ -42,7 +39,7 @@ if (case == 1):
 if (case == 2):
   print(a)
 
-print('CRON END')
+print('CRON END - ' + log)
 
-with open('C:\\Users\\vbrajon\\100m\\command-r\\cmdstatus.txt', 'a') as f:
-    f.write('CRON END - ' + str(os.getpid()) + ' - CASE ' + str(case) + ' - ' + datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat() + '\n')
+with open('test\\cmdstatus.txt', 'a') as f:
+  f.write('CRON END - ' + log)

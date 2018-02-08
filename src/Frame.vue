@@ -11,57 +11,57 @@
   box-shadow: var(--box-shadow);
   margin: 2px auto;
 }
-.lines {
+.frame .lines {
   overflow-y: auto;
   font-size: 70%;
   font-weight: 500;
 }
-.header {
+.frame .header {
   min-height: 50px;
   font-weight: 500;
   box-shadow: var(--box-shadow);
   background: rgba(255, 221, 0, 0.2);
 }
-.search,
-.line {
+.frame .search,
+.frame .line {
   min-height: 35px;
 }
-.line:hover .cell,
-.cell.highlight {
+.frame .line:hover .cell,
+.frame .cell.highlight {
   background: rgba(255, 221, 0, 0.1);
 }
-.line .cell.active {
+.frame .line .cell.active {
   background: rgba(255, 221, 0, 0.4);
 }
-.cell {
+.frame .cell {
   min-width: 100px;
   max-width: 100px;
   padding: 5px 10px;
   white-space: nowrap;
   overflow: auto;
 }
-.cell:hover {
+.frame .cell:hover {
   cursor: pointer;
   outline: 1px solid #fd4;
   outline-offset: -1px;
 }
-.cell.sort-asc::after {
-  content: '\25B3';
+.frame .cell.sort {
   color: var(--primary);
   margin-left: 4px;
 }
-.cell.sort-desc::after {
+.frame .cell.sort.asc::after {
+  content: '\25B3';
+}
+.frame .cell.sort.desc::after {
   content: '\25BD';
-  color: var(--primary);
-  margin-left: 4px;
 }
 .frame input {
   margin: 0 !important;
   padding: 8px !important;
   padding-right: 0 !important;
 }
-[name='limit'],
-[name='length'] {
+.frame [name='limit'],
+.frame [name='length'] {
   max-width: 50px;
 }
 .frame .cell:first-child {
@@ -84,22 +84,22 @@
 .frame.less .more {
   display: none;
 }
-.cell {
+.frame .cell {
   -ms-overflow-style: none;
 }
-.cell {
+.frame .cell {
   overflow: -moz-scrollbars-none;
 }
-.cell::-webkit-scrollbar {
+.frame .cell::-webkit-scrollbar {
   display: none;
 }
-.lines {
+.frame .lines {
   -ms-overflow-style: none;
 }
-.lines {
+.frame .lines {
   overflow: -moz-scrollbars-none;
 }
-.lines::-webkit-scrollbar {
+.frame .lines::-webkit-scrollbar {
   display: none;
 }
 </style>
@@ -114,18 +114,18 @@
       <input name="length" type="text" :value="lines.length" disabled />
     </div>
     <div row class="header" v-if="metadata">
-      <div row center left
-        :class="['cell', highlight === index && 'highlight', sort === index && (desc ? 'sort-desc' : 'sort-asc')]"
-        v-html="t[meta[0]] || meta[0]" v-for="(meta, index) in metadata" :key="index"
-        @mouseover="highlight = index" @mouseout="highlight = null"
-        @click="click(index)"></div>
+      <div row center left class="cell"
+        :class="{ highlight: highlight === header, sort: sort === header, desc: desc, asc: !desc }"
+        v-html="header" v-for="(format, header) in metadata" :key="header"
+        @mouseover="highlight = header" @mouseout="highlight = null"
+        @click="click(header)"></div>
     </div>
     <div class="lines">
-      <div row class="line" v-for="(line, index) in lines.slice(0, limit)" :key="index">
-        <div row center left
-          :class="['cell', highlight === index && 'highlight', line[0] === $route.query.line && 'active']"
-          v-html="format(index, line)" v-for="(cell, index) in line" :key="index"
-          @click="click(index, line)"></div>
+      <div row class="line" v-for="(line, index) in lines" :key="index">
+        <div row center left class="cell"
+          :class="{ highlight: highlight === header }"
+          v-html="format ? format(line) : line[header]" v-for="(format, header) in metadata" :key="header"
+          @click="click(index)"></div>
       </div>
     </div>
   </div>
@@ -133,6 +133,8 @@
 </template>
 
 <script>
+// No router > active: Object.values(line).includes($route.query.line)
+// No xtend > .values()
 export default {
   props: ['data', 'metadata'],
   data() {
@@ -149,7 +151,7 @@ export default {
     lines() {
       let data = this.data
       if (this.search) data = data.filter(d => d.some(v => new RegExp(this.search, 'i').test(v)))
-      return data.sortBy(this.sort, this.desc)
+      return data.sortBy(this.sort, this.desc).slice(0, this.limit)
     },
   },
   methods: {
