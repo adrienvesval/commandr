@@ -1,45 +1,62 @@
 const express = require('express')
 const app = express()
 
-if (process.env.ENV === 'dev') app.use((req, res, next) => {
-  if (/^\/api/.test(req.url)) return next()
-  return require('axios').get('http://127.0.0.1:8080' + req.url).then(r => res.send(r.data)).catch(err => console.error('Proxy Error', req.url))
-})
+if (process.env.ENV === 'dev')
+  app.use((req, res, next) => {
+    if (/^\/api/.test(req.url)) return next()
+    return require('axios')
+      .get('http://127.0.0.1:8080' + req.url)
+      .then(r => res.send(r.data))
+      .catch(err => console.error('Proxy Error', req.url))
+  })
 if (process.env.ENV !== 'dev') app.use(express.static('dist'))
 
 app.use(express.json())
 // TODO: logger - ':method :url :status :response-time ms - :date[iso]'
 
 const axios = require('axios')
-const email = (subject, content) => process.env.SENDGRID_API_KEY && axios({
-  method: 'POST',
-  url: 'https://api.sendgrid.com/v3/mail/send',
-  headers: {
-    'Authorization': 'Bearer ' + process.env.SENDGRID_API_KEY,
-    'Content-Type': 'application/json'
-  },
-  data: {
-    "personalizations": [{
-      "to": [{
-        "email": process.env.COMMANDR_EMAIL || "robot@100m.io"
-      }],
-      "subject": subject || "Commandr Run Status"
-    }],
-    "from": {
-      "email": "robot@100m.io"
+const email = (subject, content) =>
+  process.env.SENDGRID_API_KEY &&
+  axios({
+    method: 'POST',
+    url: 'https://api.sendgrid.com/v3/mail/send',
+    headers: {
+      Authorization: 'Bearer ' + process.env.SENDGRID_API_KEY,
+      'Content-Type': 'application/json',
     },
-    "content": [{
-      "type": "text/html",
-      "value": content
-    }]
-  },
-})
+    data: {
+      personalizations: [
+        {
+          to: [
+            {
+              email: process.env.COMMANDR_EMAIL || 'robot@100m.io',
+            },
+          ],
+          subject: subject || 'Commandr Run Status',
+        },
+      ],
+      from: {
+        email: 'robot@100m.io',
+      },
+      content: [
+        {
+          type: 'text/html',
+          value: content,
+        },
+      ],
+    },
+  })
 const simplify = cmd => {
   if (!/(\\|\/)/.test(cmd)) return cmd
-  return cmd.replace(/['"]/g, '').split(' ').last().split(/(\\|\/)/).last()
+  return cmd
+    .replace(/['"]/g, '')
+    .split(' ')
+    .last()
+    .split(/(\\|\/)/)
+    .last()
 }
 const template = (cmd, status) => {
-  if (!cmd.run || !cmd.run.duration) return cmd.run && cmd.run.start && (new Date() - new Date(cmd.run.start) < 10000) || email('✗ Command Scheduling Error', JSON.stringify(cmd))
+  if (!cmd.run || !cmd.run.duration) return (cmd.run && cmd.run.start && new Date() - new Date(cmd.run.start) < 10000) || email('✗ Command Scheduling Error', JSON.stringify(cmd))
   const symbol = status === 'success' ? '✓' : '✗'
   const subject = `${symbol} Command ${status} - ${simplify(cmd.command)}`
   const content = `<ul>
@@ -48,7 +65,7 @@ const template = (cmd, status) => {
     <li>Start on: ${os.hostname()} - ${os.platform()} - ${os.arch()}</li>
     <li>Start At: ${new Date(cmd.run.start).iso().slice(0, 16) + 'Z'}</li>
     <li>Duration: ${cmd.run.duration.duration()}</li>
-    <li>Next Schedule: ${cmd.nextrun && new Date(cmd.nextrun).iso().slice(0, 16) + 'Z' || 'never'}</li>
+    <li>Next Schedule: ${(cmd.nextrun && new Date(cmd.nextrun).iso().slice(0, 16) + 'Z') || 'never'}</li>
     <li>Output: <code><pre>${[cmd.run.stdout, cmd.run.stderr, cmd.run.err].filter(x => x).join(' // ') || 'null'}</pre></code></li>
   </ul>`
   return email(subject, content)
@@ -70,13 +87,23 @@ const exec = cmd => {
 const cmdpath = path.join(os.homedir(), '.commandr.json')
 const running = pid => {
   if (!pid) return false
-  try { return process.kill(pid, 0) } catch (e) { return e.code === 'EPERM' }
+  try {
+    return process.kill(pid, 0)
+  } catch (e) {
+    return e.code === 'EPERM'
+  }
 }
 Sugar.extend({ objectPrototype: true })
 
 const commands = fs.existsSync(cmdpath) ? require(cmdpath) : {}
 let timeout = null
-let counter = commands.keys().last() && +commands.keys().last().slice(1) || 0
+let counter =
+  (commands.keys().last() &&
+    +commands
+      .keys()
+      .last()
+      .slice(1)) ||
+  0
 const next = cmd => {
   if (!cmd.schedule) return cmd
   let t = {
@@ -91,14 +118,18 @@ const next = cmd => {
   let [repeat, date, period] = cmd.schedule.split('/')
   repeat = repeat.slice(1) === '' ? Infinity : +repeat.slice(1)
   date = new Date(date)
-  period = period.replace(/(P|T)/g, '').match(/\d*[A-Z]/g).map(p => +p.slice(0, -1) * t[p.slice(-1)]).sum()
+  period = period
+    .replace(/(P|T)/g, '')
+    .match(/\d*[A-Z]/g)
+    .map(p => +p.slice(0, -1) * t[p.slice(-1)])
+    .sum()
 
   if (!repeat || !date || !period) return null
   if (+date > +new Date()) return date
   const num = (new Date() - date) / period
   if (num > repeat - 1) return null
 
-  cmd.nextrun = new Date(+date + (Math.ceil(num) * period))
+  cmd.nextrun = new Date(+date + Math.ceil(num) * period)
   if (cmd.skip) cmd.nextrun = cmd.nextrun + period
   return cmd
 }
@@ -129,16 +160,20 @@ const run = cmd => {
   if (!cmd.runs) cmd.runs = []
   const child = exec(cmd.command)
   cmd.run = { start: new Date().iso(), pid: child.pid }
-  child.stdout.on('data', data => cmd.run.stdout = data.toString())
-  child.stderr.on('data', data => cmd.run.stderr = data.toString())
-  child.on('error', err => cmd.run.err = err)
+  child.stdout.on('data', data => (cmd.run.stdout = data.toString()))
+  child.stderr.on('data', data => (cmd.run.stderr = data.toString()))
+  child.on('error', err => (cmd.run.err = err))
   child.on('close', code => close(cmd, code))
 }
 const update_timer = () => {
   clearTimeout(timeout)
   commands.map(next)
   fs.writeFileSync(cmdpath, JSON.stringify(commands))
-  const nextrun = commands.filter(c => c.nextrun).map('nextrun').values().min()
+  const nextrun = commands
+    .filter(c => c.nextrun)
+    .map('nextrun')
+    .values()
+    .min()
   if (!nextrun) return
   const cmds = commands.filter({ nextrun })
   timeout = setTimeout(() => {
@@ -210,6 +245,7 @@ app.get('/api/:id/kill', (req, res) => {
   if (!commands[req.params.id]) return res.status(404).send('command_not_found')
   if (!commands[req.params.id].run) return res.status(404).send('command_not_running')
 
+  commands[req.params.id].run.stderr = commands[req.params.id].run.stderr || 'Task Killed'
   const pid = commands[req.params.id].run.pid
   if (!running(pid)) close(commands[req.params.id])
   if (running(pid) && os.platform() !== 'win32') require('child_process').exec('kill -9 ' + pid)

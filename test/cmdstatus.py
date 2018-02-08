@@ -31,7 +31,7 @@ with open('test\\cmdstatus.txt', 'a') as f:
   f.write('CRON START - ' + log)
 
 print('CRON START - ' + log)
-time.sleep(1)
+time.sleep(5)
 
 if (case == 1):
   crash()
