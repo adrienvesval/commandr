@@ -291,15 +291,15 @@ label input {
       <h3>Task {{ popup_logs.id.replace('C', '#') }} - Logs</h3>
       <div column class="log-info">
         <div>Command: {{ popup_logs.command }}</div>
-        <div>Total Runs: {{ popup_logs.runs.length }}</div>
+        <div>Total Runs: {{ ((popup_logs.runs || []) || []).length }}</div>
         <div row>
           <input type="text" name="search" placeholder="Search" v-model="search_logs" />
           <button @click="output = !output">Toggle outputs</button>
         </div>
       </div>
-      <div column class="log-line" v-for="(run, index) in popup_logs.runs.map(d => d).reverse()" :key="index" v-if="!search_logs || new RegExp(search_logs, 'i').test((run.error ? '✗' : '✓') + ' - Run ' + (popup_logs.runs.length - index) + ' - Start At: ' + run.start.slice(0, 16) + ' - Duration: ' + run.duration.duration())">
+      <div column class="log-line" v-for="(run, index) in (popup_logs.runs || []).map(d => d).reverse()" :key="index" v-if="!search_logs || new RegExp(search_logs, 'i').test((run.error ? '✗' : '✓') + ' - Run ' + ((popup_logs.runs || []).length - index) + ' - Start At: ' + run.start.slice(0, 16) + ' - Duration: ' + run.duration.duration())">
         <div>
-          <span class="status" :class="run.error ? 'negative' : 'positive'">{{ run.error ? '✗' : '✓' }}</span> - Run {{ popup_logs.runs.length - index }} - Start At: {{ run.start.slice(0, 16) }} - Duration: {{ run.duration.duration() }}
+          <span class="status" :class="run.error ? 'negative' : 'positive'">{{ run.error ? '✗' : '✓' }}</span> - Run {{ (popup_logs.runs || []).length - index }} - Start At: {{ run.start.slice(0, 16) }} - Duration: {{ run.duration.duration() }}
         </div>
         <div v-if="output">
           <pre class="stdout">{{ run.stdout }}</pre>
