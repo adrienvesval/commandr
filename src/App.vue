@@ -21,7 +21,7 @@ h1 {
   background: var(--background);
 }
 section {
-  padding: 0;
+  padding: 0 !important;
   margin: 20px !important;
   max-width: calc(100% - 40px);
 }
@@ -219,12 +219,29 @@ label input {
 .table-list .cell.negative {
   background: #db2e65;
 }
+.table-list .sort {
+  color: var(--primary);
+}
+.table-list .desc,
+.table-list .asc {
+  cursor: pointer;
+  user-select: none;
+}
+.table-list .sort::after {
+  margin-left: 4px;
+}
+.table-list .sort.asc::after {
+  content: '\25B3';
+}
+.table-list .sort.desc::after {
+  content: '\25BD';
+}
 </style>
 
 <template>
 <main>
   <h1>Command Scheduler</h1>
-  <section grid>
+  <section container grid>
     <kpi :data="[['Machine', machine], ['Notify', notify], ['Cmds', commands.values().length], ['Runs', runs], ['Errors', errors]]" />
     <div class="kpi-timer" row center around>
       <span column>
@@ -234,7 +251,7 @@ label input {
       <timer :time="nextcmd.nextrun" @time="list"></timer>
     </div>
   </section>
-  <section>
+  <section container>
     <div class="table-list">
       <form class="cmd new" row @submit.prevent="add($event.target)">
         <input type="text" name="id" :value="'#' + (counter + 1)" disabled />
@@ -243,15 +260,15 @@ label input {
         <input left type="text" name="search" placeholder="Search" v-model="search" />
       </form>
       <div class="cmd header" row>
-        <div>ID</div>
-        <div f1>Command</div>
+        <div :class="{ sort: sort === 'id', desc: desc, asc: !desc }" @click="desc = sort === 'id' ? !desc : true;sort = 'id'">ID</div>
+        <div :class="{ sort: sort === 'command', desc: desc, asc: !desc }" @click="desc = sort === 'command' ? !desc : true;sort = 'command'" f1>Command</div>
         <div class="day" row center>
           <button @click="prev">&lt;</button>
           {{ day }}
           <button @click="next">&gt;</button>
         </div>
       </div>
-      <div class="cmd item" row v-for="command in commands" :key="command.id" v-if="!search || search === command.id || new RegExp(search, 'i').test(command.command)">
+      <div class="cmd item" row v-for="command in commands.values().sortBy(sort, desc)" :key="command.id" v-if="!search || search === command.id || new RegExp(search, 'i').test(command.command)">
         <div row center>{{ command.id.replace('C', '#') }}</div>
         <div f1 row center left tt="Click to Edit" @click="popup_edit = command">{{ command.command }}</div>
         <div row center><span v-if="command.nextrun">{{ nexttime(command) }}</span></div>
@@ -287,7 +304,7 @@ label input {
     </form>
   </drawer>
   <drawer @close="popup_logs = null" :openned="!!popup_logs">
-    <section class="cmd logs" column @submit.prevent="logs(popup_logs.id, $event.target)" v-if="popup_logs">
+    <section container class="cmd logs" column @submit.prevent="logs(popup_logs.id, $event.target)" v-if="popup_logs">
       <h3>Task {{ popup_logs.id.replace('C', '#') }} - Logs</h3>
       <div column class="log-info">
         <div>Command: {{ popup_logs.command }}</div>
@@ -333,6 +350,8 @@ export default {
       notify: null,
       popup_edit: null,
       popup_logs: null,
+      sort: 'id',
+      desc: true,
       search: null,
       search_logs: null,
       output: false,
