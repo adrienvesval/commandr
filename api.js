@@ -80,7 +80,7 @@ const exec = cmd => {
   if (!cmd) return
   const program = cmd.split(' ')[0]
   const args = cmd.split(' ').slice(1)
-  const child = spawn(program, args)
+  const child = spawn(program, args, { shell: true, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
   child.unref()
   return child
 }
