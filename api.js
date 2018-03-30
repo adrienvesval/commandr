@@ -1,5 +1,6 @@
 const express = require('express')
 const app = express()
+require('dotenv').config()
 
 if (process.env.ENV === 'dev')
   app.use((req, res, next) => {
@@ -75,7 +76,7 @@ const Sugar = require('sugar')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const { spawn } = require('child_process')
+const { spawn, execSync } = require('child_process')
 const exec = cmd => {
   if (!cmd) return
   const program = cmd.split(' ')[0]
@@ -181,6 +182,19 @@ const update_timer = () => {
     cmds.map(run)
   }, nextrun - new Date())
 }
+const check_command = command => {
+  const program = command.split(' ')[0]
+  if (!program) return true // empty case
+  if (fs.existsSync(program)) return true
+  try {
+    execSync('which ' + program)
+    return true
+  } catch (e) {
+    return false
+  }
+  return false
+}
+
 commands.map(cmd => delete cmd.run) // NOTE: We lose track of running command on restart
 update_timer()
 
@@ -206,8 +220,17 @@ app.put('/api/:id', (req, res) => {
   if (!/127.0.0.1/.test(req.ip)) return res.status(401).send('unauthorized_remote_action')
   if (!commands[req.params.id]) return res.status(404).send('command_not_found')
   const { command, schedule, runhook, onsuccess, onerror } = req.body
+  if (!(check_command(command) && check_command(onsuccess) && check_command(onerror))) {
+    const results = {
+      command: check_command(command),
+      onsuccess: check_command(onsuccess),
+      onerror: check_command(onerror),
+    }
+    return res.status(400).send(results)
+  }
   commands[req.params.id].command = command
   commands[req.params.id].schedule = schedule
+  if (!schedule) commands[req.params.id].nextrun = null
   commands[req.params.id].runhook = runhook
   commands[req.params.id].onsuccess = onsuccess
   commands[req.params.id].onerror = onerror
@@ -224,6 +247,13 @@ app.delete('/api/:id', (req, res) => {
   res.send('OK')
 })
 
+// // Get command
+// app.get('/api/:id', (req, res) => {
+//   if (!commands[req.params.id]) return res.status(404).send('command_not_found')
+//   const command = commands[req.params.id]
+//   return res.send({ command })
+// })
+//
 // Run specific command
 app.get('/api/:id/run', (req, res) => {
   if (!commands[req.params.id]) return res.status(404).send('command_not_found')

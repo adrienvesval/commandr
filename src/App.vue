@@ -90,13 +90,21 @@ input[name='id'] {
   max-width: 35px;
 }
 input[name='runhook'] {
-  width: 20px;
+  width: 200px;
   margin: 0 2px 0 0;
 }
 input[name='search'] {
   margin-left: auto;
 }
+input[name='command'] {
+  width: 400px;
+}
 input::-webkit-clear-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
@@ -291,15 +299,18 @@ label input {
   <drawer @close="popup_edit = null" :openned="!!popup_edit">
     <form class="cmd edit" column @submit.prevent="edit(popup_edit.id, $event.target)">
       <h3>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} - Edit</h3>
-      <label row center>Command: <input full type="text" name="command" required /></label>
+      <label row center left>Command: <input full type="text" name="command" required /></label>
+      <div v-if="!command">Please enter a valid command</div>
       <hr>
-      <label row center left>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} will run every time Task #<input type="text" name="runhook" /> succeeds.</label>
+      <label row center left>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} will run every time Task #<input type="number" name="runhook" min="0" max="1000"/> succeeds.</label>
       <hr>
-      <label row center left>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} will run on schedule at: <input type="text" name="schedule" @focus="!$event.target.value && ($event.target.value = 'R/' + new Date().iso().slice(0, 13) + ':00/PT24H')" /></label>
+      <label row center left>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} will run on schedule at: <input type="text" name="schedule" @focus="!$event.target.value && ($event.target.value = 'R/' + new Date().iso().slice(0, 13) + ':00/PT24H')" pattern="^R[0-9]*\/[0-9]{4}-[0-9]{2}-[0-9]{2}T.*" /></label>
       <hr>
       <label row center left>If Task {{ popup_edit && popup_edit.id.replace('C', '#') }} succeeds, run: <input type="text" name="onsuccess" /></label>
+      <div v-if="!onsuccess">Please enter a valid command</div>
       <hr>
       <label row center left>If Task {{ popup_edit && popup_edit.id.replace('C', '#') }} fails, run: <input type="text" name="onerror" /></label>
+      <div v-if="!onerror">Please enter a valid command</div>
       <button type="submit">SAVE</button>
     </form>
   </drawer>
@@ -355,6 +366,9 @@ export default {
       search: null,
       search_logs: null,
       output: false,
+      onerror: true,
+      onsuccess: true,
+      command: true,
     }
   },
   computed: {
@@ -427,7 +441,20 @@ export default {
         onsuccess: form.onsuccess.value,
         onerror: form.onerror.value,
       }
-      axios.put(API + id, data).then(this.reset)
+      axios
+        .put(API + id, data)
+        .then(d => {
+          this.command = true
+          this.onerror = true
+          this.onsuccess = true
+          this.reset
+        })
+        .catch(e => {
+          console.log(e.response.data)
+          this.command = e.response.data.command
+          this.onerror = e.response.data.onerror
+          this.onsuccess = e.response.data.onsuccess
+        })
     },
     run(id) {
       axios.get(API + id + '/run').then(this.reset)
