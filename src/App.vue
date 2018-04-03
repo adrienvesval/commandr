@@ -1,5 +1,5 @@
 <style>
-@import url('https://rawcss.com/raw.css');
+@import url('https://cdn.rawgit.com/vbrajon/rawcss/8268557fd641c8f5bd705db9dfff06c42f1748fd/raw.css');
 @import url('https://fonts.googleapis.com/css?family=Lato:100,300,400,900');
 :root {
   --background-1: #f1f4f9;
@@ -299,18 +299,15 @@ label input {
   <drawer @close="popup_edit = null" :openned="!!popup_edit">
     <form class="cmd edit" column @submit.prevent="edit(popup_edit.id, $event.target)">
       <h3>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} - Edit</h3>
-      <label row center left>Command: <input full type="text" name="command" required /></label>
-      <div v-if="!command">Please enter a valid command</div>
+      <label row center left>Command: <input full type="text" name="command" required @input="$event.target.setCustomValidity('')" /></label>
       <hr>
       <label row center left>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} will run every time Task #<input type="number" name="runhook" min="0" max="1000"/> succeeds.</label>
       <hr>
       <label row center left>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} will run on schedule at: <input type="text" name="schedule" @focus="!$event.target.value && ($event.target.value = 'R/' + new Date().iso().slice(0, 13) + ':00/PT24H')" pattern="^R[0-9]*\/[0-9]{4}-[0-9]{2}-[0-9]{2}T.*" /></label>
       <hr>
-      <label row center left>If Task {{ popup_edit && popup_edit.id.replace('C', '#') }} succeeds, run: <input type="text" name="onsuccess" /></label>
-      <div v-if="!onsuccess">Please enter a valid command</div>
+      <label row center left>If Task {{ popup_edit && popup_edit.id.replace('C', '#') }} succeeds, run: <input type="text" name="onsuccess" @input="$event.target.setCustomValidity('')" /></label>
       <hr>
-      <label row center left>If Task {{ popup_edit && popup_edit.id.replace('C', '#') }} fails, run: <input type="text" name="onerror" /></label>
-      <div v-if="!onerror">Please enter a valid command</div>
+      <label row center left>If Task {{ popup_edit && popup_edit.id.replace('C', '#') }} fails, run: <input type="text" name="onerror" @input="$event.target.setCustomValidity('')" /></label>
       <button type="submit">SAVE</button>
     </form>
   </drawer>
@@ -434,6 +431,7 @@ export default {
         .then(() => (form.command.value = ''))
     },
     edit(id, form) {
+      console.log('edit')
       const data = {
         command: form.command.value,
         schedule: form.schedule.value,
@@ -444,16 +442,22 @@ export default {
       axios
         .put(API + id, data)
         .then(d => {
-          this.command = true
-          this.onerror = true
-          this.onsuccess = true
-          this.reset
+          this.reset()
         })
         .catch(e => {
           console.log(e.response.data)
-          this.command = e.response.data.command
-          this.onerror = e.response.data.onerror
-          this.onsuccess = e.response.data.onsuccess
+          if (!e.response.data.command) {
+            document.querySelector('form.edit input[name="command"]').setCustomValidity('Please enter a valid command')
+            document.querySelector('form.edit input[name="command"]').reportValidity()
+          }
+          if (!e.response.data.onsuccess) {
+            document.querySelector('input[name="onsuccess"]').setCustomValidity('Please enter a valid command')
+            document.querySelector('input[name="onsuccess"]').reportValidity()
+          }
+          if (!e.response.data.onerror) {
+            document.querySelector('input[name="onerror"]').setCustomValidity('Please enter a valid command')
+            document.querySelector('input[name="onerror"]').reportValidity()
+          }
         })
     },
     run(id) {
