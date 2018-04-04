@@ -1,21 +1,57 @@
 const express = require('express')
+const bodyParser = require('body-parser')
+const jwt = require('jsonwebtoken')
+const axios = require('axios')
+const fs = require('fs')
+const Sugar = require('sugar')
+const os = require('os')
+const path = require('path')
+const { spawn, execSync } = require('child_process')
 const app = express()
+
 require('dotenv').config()
 
 if (process.env.ENV === 'dev')
   app.use((req, res, next) => {
     if (/^\/api/.test(req.url)) return next()
-    return require('axios')
+    return axios
       .get('http://127.0.0.1:8080' + req.url)
       .then(r => res.send(r.data))
       .catch(err => console.error('Proxy Error', req.url))
   })
 if (process.env.ENV !== 'dev') app.use(express.static('dist'))
 
-app.use(express.json())
+function certToPEM(cert) {
+  cert = cert.match(/.{1,64}/g).join('\n')
+  return `-----BEGIN CERTIFICATE-----\n${cert}\n-----END CERTIFICATE-----\n`
+}
+
+function authMiddleware(req, res, next) {
+  if (!/127.0.0.1/.test(req.ip)) return res.status(401).send('unauthorized_remote_action')
+  const decodedToken = jwt.decode(req.query.auth0_token, { complete: true })
+  axios
+    .get(`https://${req.query.auth0_domain}/.well-known/jwks.json`)
+    .then(res => {
+      const key = res.data.keys.find(d => d.kid === decodedToken.header.kid)
+      jwt.verify(req.query.auth0_token, certToPEM(key.x5c[0]), (err, decoded) => {
+        if (err) return res.status(401).send(err)
+        req.token = decoded
+        if (req.query.uid) {
+          const metadata = req.token['https://100m.io/app_metadata']
+          if (!metadata || !(metadata.role === 'admin' || metadata.authorized_access.includes(req.query.uid))) return res.status(401).send('unauthorized')
+        }
+        req.uid = (req.query.uid || req.token.email).replace(/@/g, 'AT').replace(/\./g, 'DOT')
+        next()
+      })
+    })
+    .catch(err => res.status(401).send('authentication_error'))
+}
+
+app.use(bodyParser.urlencoded({ extended: true }))
+app.use(bodyParser.json())
+app.use(authMiddleware)
 // TODO: logger - ':method :url :status :response-time ms - :date[iso]'
 
-const axios = require('axios')
 const email = (subject, content) =>
   process.env.SENDGRID_API_KEY &&
   axios({
@@ -72,11 +108,6 @@ const template = (cmd, status) => {
   return email(subject, content)
 }
 
-const Sugar = require('sugar')
-const fs = require('fs')
-const os = require('os')
-const path = require('path')
-const { spawn, execSync } = require('child_process')
 const exec = cmd => {
   if (!cmd) return
   const program = cmd.split(' ')[0]
@@ -205,8 +236,7 @@ app.get('/api', (req, res) => {
 
 // Post new command
 app.post('/api', (req, res) => {
-  if (!/127.0.0.1/.test(req.ip)) return res.status(401).send('unauthorized_remote_action')
-  if (!req.body.command) return res.status(400).send('command_not_specified')
+  if (!req.body.command || !check_command(req.body.command)) return res.status(400).send('command_not_specified')
   counter = counter + 1
   const id = 'C' + counter
   const { command } = req.body
@@ -217,7 +247,6 @@ app.post('/api', (req, res) => {
 
 // Edit command
 app.put('/api/:id', (req, res) => {
-  if (!/127.0.0.1/.test(req.ip)) return res.status(401).send('unauthorized_remote_action')
   if (!commands[req.params.id]) return res.status(404).send('command_not_found')
   const { command, schedule, runhook, onsuccess, onerror } = req.body
   if (!(check_command(command) && check_command(onsuccess) && check_command(onerror))) {
@@ -240,7 +269,6 @@ app.put('/api/:id', (req, res) => {
 
 // Delete specific command
 app.delete('/api/:id', (req, res) => {
-  if (!/127.0.0.1/.test(req.ip)) return res.status(401).send('unauthorized_remote_action')
   if (!commands[req.params.id]) return res.status(404).send('command_not_found')
   delete commands[req.params.id]
   update_timer()
