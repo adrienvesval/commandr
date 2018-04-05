@@ -250,7 +250,7 @@ label input {
 <main>
   <h1>Command Scheduler</h1>
   <section container grid>
-    <kpi :data="[['Machine', machine], ['Notify', notify], ['Cmds', commands.values().length], ['Runs', runs], ['Errors', errors]]" />
+    <kpi :data="[['Machine', machine], ['Notify', notify], ['Cmds', commands.v().length], ['Runs', runs], ['Errors', errors]]" />
     <div class="kpi-timer" row center around>
       <span column>
         <span>Next Run</span>
@@ -276,7 +276,7 @@ label input {
           <button @click="next">&gt;</button>
         </div>
       </div>
-      <div class="cmd item" row v-for="command in commands.values().sortBy(sort, desc)" :key="command.id" v-if="!search || search === command.id || new RegExp(search, 'i').test(command.command)">
+      <div class="cmd item" row v-for="command in commands.v().sortBy(sort, desc)" :key="command.id" v-if="!search || search === command.id || new RegExp(search, 'i').test(command.command)">
         <div row center>{{ command.id.replace('C', '#') }}</div>
         <div f1 row center left tt="Click to Edit" @click="popup_edit = command">{{ command.command }}</div>
         <div row center><span v-if="command.nextrun">{{ nexttime(command) }}</span></div>
@@ -294,6 +294,9 @@ label input {
           </div>
         </div>
       </div>
+    </div>
+    <div>
+      <a @click="logout">Logout</a>
     </div>
   </section>
   <drawer @close="popup_edit = null" :openned="!!popup_edit">
@@ -333,18 +336,49 @@ label input {
       </div>
     </section>
   </drawer>
+  <drawer class="login form" @close="login_edit = null" :openned="!!login_edit">
+    <form @submit.prevent="login" column center>
+      <fieldset>
+        <label row center left>Email: <input type="text" name="email" required /></label>
+      </fieldset>
+      <fieldset>
+        <label row center left>Password: <input type="password" name="password" required /></label>
+      </fieldset>
+      <button type="submit">SAVE</button>
+    </form>
+  </drawer>
 </main>
 </template>
 
 <script>
 import axios from 'axios'
 import Sugar from 'sugar'
+import auth0 from 'auth0-js'
 import Drawer from './Drawer.vue'
 import Frame from './Frame.vue'
 import Kpi from './Kpi.vue'
 import Timer from './Timer.vue'
-Sugar.extend({ objectPrototype: true })
+Sugar.Object.defineInstance({ k: Sugar.Object.keys, v: Sugar.Object.values })
+Sugar.Date.extend()
+Sugar.Function.extend()
+Sugar.Number.extend()
+Sugar.String.extend()
+Sugar.Array.extend()
+Sugar.Object.extend({ objectPrototype: true, methods: ['filter', 'find', 'k', 'v', 'map', 'reduce'] })
 const API = 'api/'
+const AUTH0_DOMAIN = '100m.eu.auth0.com'
+const AUTH0_CLIENT_ID = 'aVOQbkYQwk2WwjnWKg8bdYFzGCmjWweo'
+const AUTH0_PROJECT = '100m'
+const webAuth = new auth0.WebAuth({ domain: AUTH0_DOMAIN, clientID: AUTH0_CLIENT_ID })
+
+axios.interceptors.request.use(config => {
+  config.params = {
+    project: AUTH0_PROJECT,
+    auth0_domain: AUTH0_DOMAIN,
+    auth0_token: localStorage.id_token,
+  }
+  return config
+})
 
 export default {
   components: { Drawer, Frame, Kpi, Timer },
@@ -357,6 +391,7 @@ export default {
       machine: null,
       notify: null,
       popup_edit: null,
+      login_edit: localStorage.id_token ? null : true,
       popup_logs: null,
       sort: 'id',
       desc: true,
@@ -372,7 +407,7 @@ export default {
     nextcmd() {
       return (
         this.commands
-          .values()
+          .v()
           .filter(d => d.nextrun)
           .min(d => d.nextrun) || {}
       )
@@ -380,7 +415,7 @@ export default {
     running() {
       return (
         this.commands
-          .values()
+          .v()
           .filter(d => d.run)
           .map('command')
           .join(' - ') || '-'
@@ -388,7 +423,7 @@ export default {
     },
     runs() {
       return this.commands
-        .values()
+        .v()
         .map('runs')
         .filter(d => d)
         .flatten()
@@ -396,7 +431,7 @@ export default {
     },
     errors() {
       return this.commands
-        .values()
+        .v()
         .map('runs')
         .filter(d => d)
         .flatten()
@@ -404,7 +439,7 @@ export default {
     },
     days() {
       return this.commands
-        .values()
+        .v()
         .map('runs')
         .filter(d => d)
         .flatten()
@@ -431,7 +466,6 @@ export default {
         .then(() => (form.command.value = ''))
     },
     edit(id, form) {
-      console.log('edit')
       const data = {
         command: form.command.value,
         schedule: form.schedule.value,
@@ -459,6 +493,24 @@ export default {
             document.querySelector('input[name="onerror"]').reportValidity()
           }
         })
+    },
+    login($event) {
+      webAuth.client.login(
+        {
+          realm: 'Username-Password-Authentication',
+          username: $event.target.elements.email.value,
+          password: $event.target.elements.password.value,
+        },
+        (err, result) => {
+          if (err) return console.log(err.code, 'error')
+          localStorage.setItem('id_token', result.idToken)
+          this.login_edit = null
+        },
+      )
+    },
+    logout() {
+      localStorage.clear()
+      setTimeout(() => location.reload(), 0)
     },
     run(id) {
       axios.get(API + id + '/run').then(this.reset)
@@ -521,7 +573,7 @@ export default {
   },
   mounted() {
     setInterval(() => {
-      if (!this.running.length) return
+      if (!this.running.length || !localStorage.id_token) return
       this.list()
     }, 1000)
   },

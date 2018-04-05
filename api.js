@@ -36,11 +36,6 @@ function authMiddleware(req, res, next) {
       jwt.verify(req.query.auth0_token, certToPEM(key.x5c[0]), (err, decoded) => {
         if (err) return res.status(401).send(err)
         req.token = decoded
-        if (req.query.uid) {
-          const metadata = req.token['https://100m.io/app_metadata']
-          if (!metadata || !(metadata.role === 'admin' || metadata.authorized_access.includes(req.query.uid))) return res.status(401).send('unauthorized')
-        }
-        req.uid = (req.query.uid || req.token.email).replace(/@/g, 'AT').replace(/\./g, 'DOT')
         next()
       })
     })
