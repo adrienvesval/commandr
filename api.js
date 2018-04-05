@@ -27,10 +27,10 @@ function certToPEM(cert) {
 }
 
 function authMiddleware(req, res, next) {
-  if (!/127.0.0.1/.test(req.ip)) return res.status(401).send('unauthorized_remote_action')
+  if (/127.0.0.1/.test(req.ip)) return next()
   const decodedToken = jwt.decode(req.query.auth0_token, { complete: true })
   axios
-    .get(`https://${req.query.auth0_domain}/.well-known/jwks.json`)
+    .get(`https://${process.env.AUTH0_DOMAIN}/.well-known/jwks.json`)
     .then(res => {
       const key = res.data.keys.find(d => d.kid === decodedToken.header.kid)
       jwt.verify(req.query.auth0_token, certToPEM(key.x5c[0]), (err, decoded) => {

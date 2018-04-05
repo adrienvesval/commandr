@@ -11,6 +11,12 @@ html {
 body {
   background: var(--background-1);
 }
+a {
+  cursor: pointer;
+}
+a:before {
+  left: 0;
+}
 h1 {
   height: 60px;
   line-height: 60px;
@@ -244,11 +250,29 @@ label input {
 .table-list .sort.desc::after {
   content: '\25BD';
 }
+.login form {
+  height: 100%;
+}
+.login fieldset {
+  margin-bottom: 20px;
+}
+.login label {
+  margin: 0 50px;
+  font-size: 80%;
+  text-transform: uppercase;
+}
+.login input {
+  margin: 0 50px;
+}
+.login button[type='submit'] {
+  margin: 0;
+}
 </style>
 
 <template>
 <main>
   <h1>Command Scheduler</h1>
+  <button style="position: absolute;top: 12px;right: 12px;" @click="logout" v-if="!local">LOGOUT</button>
   <section container grid>
     <kpi :data="[['Machine', machine], ['Notify', notify], ['Cmds', commands.v().length], ['Runs', runs], ['Errors', errors]]" />
     <div class="kpi-timer" row center around>
@@ -295,9 +319,6 @@ label input {
         </div>
       </div>
     </div>
-    <div>
-      <a @click="logout">Logout</a>
-    </div>
   </section>
   <drawer @close="popup_edit = null" :openned="!!popup_edit">
     <form class="cmd edit" column @submit.prevent="edit(popup_edit.id, $event.target)">
@@ -336,15 +357,17 @@ label input {
       </div>
     </section>
   </drawer>
-  <drawer class="login form" @close="login_edit = null" :openned="!!login_edit">
+  <drawer class="login" @close="login_edit = null" :openned="!local && !!login_edit">
     <form @submit.prevent="login" column center>
       <fieldset>
-        <label row center left>Email: <input type="text" name="email" required /></label>
+        <label row center left>Email:</label>
+        <input type="text" name="email" required />
       </fieldset>
       <fieldset>
-        <label row center left>Password: <input type="password" name="password" required /></label>
+        <label row center left>Password:</label>
+        <input type="password" name="password" required />
       </fieldset>
-      <button type="submit">SAVE</button>
+      <button type="submit">LOGIN</button>
     </form>
   </drawer>
 </main>
@@ -368,13 +391,10 @@ Sugar.Object.extend({ objectPrototype: true, methods: ['filter', 'find', 'k', 'v
 const API = 'api/'
 const AUTH0_DOMAIN = '100m.eu.auth0.com'
 const AUTH0_CLIENT_ID = 'aVOQbkYQwk2WwjnWKg8bdYFzGCmjWweo'
-const AUTH0_PROJECT = '100m'
 const webAuth = new auth0.WebAuth({ domain: AUTH0_DOMAIN, clientID: AUTH0_CLIENT_ID })
 
 axios.interceptors.request.use(config => {
   config.params = {
-    project: AUTH0_PROJECT,
-    auth0_domain: AUTH0_DOMAIN,
     auth0_token: localStorage.id_token,
   }
   return config
@@ -391,12 +411,13 @@ export default {
       machine: null,
       notify: null,
       popup_edit: null,
-      login_edit: localStorage.id_token ? null : true,
+      login_edit: !localStorage.id_token,
       popup_logs: null,
       sort: 'id',
       desc: true,
       search: null,
       search_logs: null,
+      local: location.origin === 'http://127.0.0.1:1111',
       output: false,
       onerror: true,
       onsuccess: true,
