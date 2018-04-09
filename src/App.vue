@@ -358,7 +358,7 @@ label input {
     </section>
   </drawer>
   <drawer class="login" @close="login_edit = null" :openned="!local && !!login_edit">
-    <form @submit.prevent="login" column center>
+    <form @submit.prevent="login" column center v-if="!otp">
       <fieldset>
         <label row center left>Email:</label>
         <input type="text" name="email" required />
@@ -366,6 +366,13 @@ label input {
       <fieldset>
         <label row center left>Password:</label>
         <input type="password" name="password" required />
+      </fieldset>
+      <button type="submit">LOGIN</button>
+    </form>
+    <form @submit.prevent="google_auth" column center v-if="otp">
+      <fieldset>
+        <label row center left>Google authenticator:</label>
+        <input name="google" required />
       </fieldset>
       <button type="submit">LOGIN</button>
     </form>
@@ -417,7 +424,9 @@ export default {
       desc: true,
       search: null,
       search_logs: null,
-      local: location.origin === 'http://127.0.0.1:1111',
+      local: false,
+      mfa_token: false,
+      otp: false,
       output: false,
       onerror: true,
       onsuccess: true,
@@ -523,11 +532,36 @@ export default {
           password: $event.target.elements.password.value,
         },
         (err, result) => {
-          if (err) return console.log(err.code, 'error')
+          if (err) {
+            if (err.code == 'mfa_required') {
+              this.mfa_token = err.original.response.body.mfa_token
+              axios.post('https://' + AUTH0_DOMAIN + '/mfa/challenge', { client_id: AUTH0_CLIENT_ID, mfa_token: err.original.response.body.mfa_token }).then(d => {
+                if (d.data.challenge_type == 'otp') {
+                  this.otp = true
+                }
+              })
+              return
+            }
+          }
           localStorage.setItem('id_token', result.idToken)
           this.login_edit = null
         },
       )
+    },
+    google_auth($event) {
+      axios
+        .post('https://' + AUTH0_DOMAIN + '/oauth/token', {
+          client_id: AUTH0_CLIENT_ID,
+          grant_type: 'http://auth0.com/oauth/grant-type/mfa-otp',
+          mfa_token: this.mfa_token,
+          otp: $event.target.elements.google.value,
+        })
+        .then(d => {
+          if (d.data.id_token) {
+            localStorage.setItem('id_token', d.data.id_token)
+            this.login_edit = null
+          }
+        })
     },
     logout() {
       localStorage.clear()
