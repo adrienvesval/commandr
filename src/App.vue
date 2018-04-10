@@ -92,7 +92,7 @@ label input {
 pre {
   position: relative;
   padding: 10px;
-  border: 3px dashed var(--divider);
+  border: 1px dashed rgba(0, 30, 80, 0.3);
   font-size: 10px;
 }
 pre::before {
