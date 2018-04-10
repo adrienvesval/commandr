@@ -1,9 +1,11 @@
 <style>
-@import url('https://cdn.rawgit.com/vbrajon/rawcss/8268557fd641c8f5bd705db9dfff06c42f1748fd/raw.css');
+/* @import url('https://cdn.rawgit.com/vbrajon/rawcss/8268557fd641c8f5bd705db9dfff06c42f1748fd/raw.css'); */
+@import url('https://rawcss.com/raw.css');
 @import url('https://fonts.googleapis.com/css?family=Lato:100,300,400,900');
 :root {
-  --background-1: #f1f4f9;
-  --box-shadow: 0 3px 10.5px 0 rgba(74, 105, 160, 0.16);
+  --background-1: #f6f9fd;
+  --highlight: rgba(255, 221, 68, 0.5);
+  --high: #fd4;
 }
 html {
   font-family: Lato;
@@ -20,70 +22,29 @@ a:before {
 h1 {
   height: 60px;
   line-height: 60px;
-  font-size: 18px;
+  font-size: 16px;
   text-transform: uppercase;
   text-align: center;
   border-bottom: var(--border);
   background: var(--background);
 }
-section {
-  padding: 0 !important;
-  margin: 20px !important;
-  max-width: calc(100% - 40px);
-}
-em {
-  font-style: normal;
-  color: var(--primary);
-}
-pre {
-  position: relative;
-  padding: 10px;
-  border: 3px dashed var(--divider);
-  font-size: 10px;
-}
-pre::before {
-  position: absolute;
-  top: -11px;
-  left: 0;
-  width: 120px;
-  background: var(--background-1);
-  text-align: center;
-}
-pre.stdout::before {
-  content: 'Standard Output';
-  color: #63c261;
-}
-pre.stderr::before {
-  content: 'Error Output';
-  color: #db2e65;
-}
-@media (min-width: 1000px) {
-  section,
-  header,
-  footer {
-    margin: 20px auto !important;
-  }
-  body {
-    font-size: 16px;
-  }
-}
-[grid] > * {
-  background: var(--background);
-  box-shadow: var(--box-shadow);
+[container] {
+  max-width: 100vw;
+  margin: 10px;
+  overflow: auto;
 }
 .kpi,
 .kpi-timer {
   min-width: 300px !important;
   min-height: 80px;
+  background: var(--background);
+  box-shadow: var(--box-shadow);
+  margin: 4px 0;
 }
-
 .table-list {
   background: var(--background);
   box-shadow: var(--box-shadow);
-  overflow: auto;
-}
-hr {
-  margin: 10px 60px;
+  min-width: 600px;
 }
 input {
   width: 180px;
@@ -103,7 +64,7 @@ input[name='search'] {
   margin-left: auto;
 }
 input[name='command'] {
-  width: 400px;
+  width: 200px;
 }
 input::-webkit-clear-button {
   -webkit-appearance: none;
@@ -126,6 +87,33 @@ label input {
 }
 [xs] {
   font-size: 9px;
+}
+
+pre {
+  position: relative;
+  padding: 10px;
+  border: 3px dashed var(--divider);
+  font-size: 10px;
+}
+pre::before {
+  position: absolute;
+  top: -11px;
+  left: 0;
+  width: 120px;
+  background: var(--background-1);
+  text-align: center;
+}
+pre.stdout::before {
+  content: 'Standard Output';
+  color: #63c261;
+}
+pre.stderr::before {
+  content: 'Error Output';
+  color: #db2e65;
+}
+
+form.edit label {
+  margin: 20px 0;
 }
 
 .drawer .slot {
@@ -267,6 +255,22 @@ label input {
 .login button[type='submit'] {
   margin: 0;
 }
+@media (min-width: 1000px) {
+  body {
+    font-size: 16px;
+  }
+  [container] {
+    width: 1000px;
+    margin: auto;
+  }
+  .kpi,
+  .kpi-timer {
+    margin: 16px;
+  }
+  input[name='command'] {
+    width: 400px;
+  }
+}
 </style>
 
 <template>
@@ -324,19 +328,15 @@ label input {
     <form class="cmd edit" column @submit.prevent="edit(popup_edit.id, $event.target)">
       <h3>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} - Edit</h3>
       <label row center left>Command: <input full type="text" name="command" required @input="$event.target.setCustomValidity('')" /></label>
-      <hr>
       <label row center left>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} will run every time Task #<input type="number" name="runhook" min="0" max="1000"/> succeeds.</label>
-      <hr>
       <label row center left>Task {{ popup_edit && popup_edit.id.replace('C', '#') }} will run on schedule at: <input type="text" name="schedule" @focus="!$event.target.value && ($event.target.value = 'R/' + new Date().iso().slice(0, 13) + ':00/PT24H')" pattern="^R[0-9]*\/[0-9]{4}-[0-9]{2}-[0-9]{2}T.*" /></label>
-      <hr>
       <label row center left>If Task {{ popup_edit && popup_edit.id.replace('C', '#') }} succeeds, run: <input type="text" name="onsuccess" @input="$event.target.setCustomValidity('')" /></label>
-      <hr>
       <label row center left>If Task {{ popup_edit && popup_edit.id.replace('C', '#') }} fails, run: <input type="text" name="onerror" @input="$event.target.setCustomValidity('')" /></label>
       <button type="submit">SAVE</button>
     </form>
   </drawer>
   <drawer @close="popup_logs = null" :openned="!!popup_logs">
-    <section container class="cmd logs" column @submit.prevent="logs(popup_logs.id, $event.target)" v-if="popup_logs">
+    <section class="cmd logs" column @submit.prevent="logs(popup_logs.id, $event.target)" v-if="popup_logs">
       <h3>Task {{ popup_logs.id.replace('C', '#') }} - Logs</h3>
       <div column class="log-info">
         <div>Command: {{ popup_logs.command }}</div>
@@ -360,12 +360,12 @@ label input {
   <drawer class="login" @close="login_edit = null" :openned="!local && !!login_edit">
     <form @submit.prevent="login" column center v-if="!challenge_type">
       <fieldset>
-        <label row center left>Email:</label>
-        <input type="text" name="email" required />
+        <label for="email" row center left>Email:</label>
+        <input id="email" type="text" name="email" required />
       </fieldset>
       <fieldset>
-        <label row center left>Password:</label>
-        <input type="password" name="password" required />
+        <label for="password" row center left>Password:</label>
+        <input id="password" type="password" name="password" required />
       </fieldset>
       <button type="submit">LOGIN</button>
     </form>
@@ -424,7 +424,7 @@ export default {
       desc: true,
       search: null,
       search_logs: null,
-      local: false,
+      local: location.hostname === '127.0.0.1',
       mfa_token: false,
       challenge_type: '',
       output: false,
@@ -632,7 +632,8 @@ export default {
   },
   mounted() {
     setInterval(() => {
-      if (!this.running.length || !localStorage.id_token) return
+      if (!this.running.length) return
+      if (!this.local && !localStorage.id_token) return
       this.list()
     }, 1000)
   },

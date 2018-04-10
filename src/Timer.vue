@@ -48,6 +48,7 @@
   font-size: 10px;
 }
 </style>
+
 <template>
 <ul class="vue-timer">
   <li v-if="+days">

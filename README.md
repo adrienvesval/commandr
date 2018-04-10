@@ -20,8 +20,7 @@ open http://127.0.0.1:1111
 npm run serve
 ENV=dev node api.js
 # Build app - PROD (pre-commit)
-npm run build
-cd dist && cat index.html | sed "s/\/js/js/g" | sed "s/\/css/css/g" | inliner --nosvg --skip-absolute-urls -mni > inline.html && mv inline.html index.html && rm -rf css js && cd -
+npm run build && cd dist && cat index.html | sed "s/\/js/js/g" | sed "s/\/css/css/g" | inliner --nosvg --skip-absolute-urls -mni > inline.html && mv inline.html index.html && rm -rf css js && cd -
 # Run app - PROD
 node api.js
 ```
