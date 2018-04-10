@@ -231,6 +231,7 @@ app.get('/api', (req, res) => {
 
 // Post new command
 app.post('/api', (req, res) => {
+  if (!/127.0.0.1/.test(req.ip)) return res.status(401).send('unauthorized')
   if (!req.body.command || !check_command(req.body.command)) return res.status(400).send('command_not_specified')
   counter = counter + 1
   const id = 'C' + counter
@@ -242,6 +243,7 @@ app.post('/api', (req, res) => {
 
 // Edit command
 app.put('/api/:id', (req, res) => {
+  if (!/127.0.0.1/.test(req.ip)) return res.status(401).send('unauthorized')
   if (!commands[req.params.id]) return res.status(404).send('command_not_found')
   const { command, schedule, runhook, onsuccess, onerror } = req.body
   if (!(check_command(command) && check_command(onsuccess) && check_command(onerror))) {
@@ -264,19 +266,13 @@ app.put('/api/:id', (req, res) => {
 
 // Delete specific command
 app.delete('/api/:id', (req, res) => {
+  if (!/127.0.0.1/.test(req.ip)) return res.status(401).send('unauthorized')
   if (!commands[req.params.id]) return res.status(404).send('command_not_found')
   delete commands[req.params.id]
   update_timer()
   res.send('OK')
 })
 
-// // Get command
-// app.get('/api/:id', (req, res) => {
-//   if (!commands[req.params.id]) return res.status(404).send('command_not_found')
-//   const command = commands[req.params.id]
-//   return res.send({ command })
-// })
-//
 // Run specific command
 app.get('/api/:id/run', (req, res) => {
   if (!commands[req.params.id]) return res.status(404).send('command_not_found')

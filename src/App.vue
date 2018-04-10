@@ -193,6 +193,10 @@ form.edit label {
 .cmd .action {
   width: 60px;
 }
+.cmd-full {
+  max-width: 300px;
+  word-break: break-all;
+}
 .day {
   margin: 0 4px;
   min-width: 175px;
@@ -270,6 +274,9 @@ form.edit label {
   input[name='command'] {
     width: 400px;
   }
+  .cmd-full {
+    max-width: 1000px;
+  }
 }
 </style>
 
@@ -290,9 +297,11 @@ form.edit label {
   <section container>
     <div class="table-list">
       <form class="cmd new" row @submit.prevent="add($event.target)">
-        <input type="text" name="id" :value="'#' + (counter + 1)" disabled />
-        <input type="text" name="command" placeholder="Command" required />
-        <button>ADD</button>
+        <div v-if="local">
+          <input type="text" name="id" :value="'#' + (counter + 1)" disabled />
+          <input type="text" name="command" placeholder="Command" required />
+          <button>ADD</button>
+        </div>
         <input left type="text" name="search" placeholder="Search" v-model="search" />
       </form>
       <div class="cmd header" row>
@@ -306,10 +315,10 @@ form.edit label {
       </div>
       <div class="cmd item" row v-for="command in commands.v().sortBy(sort, desc)" :key="command.id" v-if="!search || search === command.id || new RegExp(search, 'i').test(command.command)">
         <div row center>{{ command.id.replace('C', '#') }}</div>
-        <div f1 row center left tt="Click to Edit" @click="popup_edit = command">{{ command.command }}</div>
+        <div class="cmd-full" f1 row center left tt="Click to Edit" @click="popup_edit = command">{{ command.command }}</div>
         <div row center><span v-if="command.nextrun">{{ nexttime(command) }}</span></div>
         <div row center>
-          <button @click="del(command.id)">DEL</button>
+          <button @click="del(command.id)" v-if="local">DEL</button>
           <button @click="kill(command.id)" v-if="command.run">KILL</button>
           <button @click="run(command.id)" v-if="!command.run">RUN</button>
         </div>
@@ -396,9 +405,10 @@ Sugar.String.extend()
 Sugar.Array.extend()
 Sugar.Object.extend({ objectPrototype: true, methods: ['filter', 'find', 'k', 'v', 'map', 'reduce'] })
 const API = 'api/'
-const AUTH0_DOMAIN = '100m.eu.auth0.com'
-const AUTH0_CLIENT_ID = 'aVOQbkYQwk2WwjnWKg8bdYFzGCmjWweo'
+const AUTH0_DOMAIN = 'voltrade.auth0.com'
+const AUTH0_CLIENT_ID = 'PlYPp7dw0ijYcU0JCs7r7BbxlT7qVh4c'
 const webAuth = new auth0.WebAuth({ domain: AUTH0_DOMAIN, clientID: AUTH0_CLIENT_ID })
+// webAuth.crossOriginVerification()
 
 axios.interceptors.request.use(config => {
   config.params = {
@@ -535,7 +545,7 @@ export default {
           if (err) {
             if (err.code == 'mfa_required') {
               this.mfa_token = err.original.response.body.mfa_token
-              axios.post('https://' + AUTH0_DOMAIN + '/mfa/challenge', { client_id: AUTH0_CLIENT_ID, mfa_token: err.original.response.body.mfa_token }).then(d => {
+              axios.post('https://' + AUTH0_DOMAIN + '/mfa/challenge', { client_id: AUTH0_CLIENT_ID, mfa_token: this.mfa_token }).then(d => {
                 this.challenge_type = d.data.challenge_type
                 this.oob_code = d.data.oob_code
               })
