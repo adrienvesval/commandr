@@ -30,7 +30,7 @@ h1 {
 }
 [container] {
   max-width: 100vw;
-  margin: 10px;
+  padding: 8px;
   overflow: auto;
 }
 .kpi,
@@ -40,11 +40,7 @@ h1 {
   background: var(--background);
   box-shadow: var(--box-shadow);
   margin: 4px 0;
-}
-.table-list {
-  background: var(--background);
-  box-shadow: var(--box-shadow);
-  min-width: 600px;
+  height: auto !important;
 }
 input {
   width: 180px;
@@ -149,7 +145,7 @@ form.edit label {
 
 .cmd {
   position: relative;
-  max-width: 1000px;
+  max-width: 100%;
 }
 .cmd [tt] {
   position: inherit;
@@ -174,7 +170,7 @@ form.edit label {
   background: rgba(0, 0, 0, 0.08);
 }
 .cmd.item > * {
-  padding: 10px;
+  padding: 10px 0;
   line-height: 1.2;
 }
 .cmd > * {
@@ -199,11 +195,20 @@ form.edit label {
   word-break: break-all;
 }
 .nexttime {
-  width: 100px;
+  width: 150px;
+  padding: 0 10px;
 }
 .day {
   margin: 0 4px;
+  margin-left: auto;
   min-width: 175px;
+}
+.table-list {
+  background: var(--background);
+  box-shadow: var(--box-shadow);
+  width: 100%;
+  min-width: 100%;
+  font-size: 80%;
 }
 .table-list .cell {
   margin: 1px;
@@ -263,6 +268,9 @@ form.edit label {
 .login button[type='submit'] {
   margin: 0;
 }
+.cmd-full .cmd-full {
+  justify-content: center;
+}
 @media (min-width: 1000px) {
   body {
     font-size: 16px;
@@ -278,15 +286,20 @@ form.edit label {
   input[name='command'] {
     width: 400px;
   }
+  .cmd {
+    max-width: 1000px;
+  }
+  .cmd.item > * {
+    padding: 10px;
+  }
+  .cmd-full .cmd-full {
+    justify-content: left;
+  }
+  .table-list {
+    min-width: 600px;
+  }
 }
 @media (max-width: 1000px) {
-  .table-list {
-    width: 100%;
-    min-width: 100%;
-  }
-  .cmd {
-    max-width: 100%;
-  }
   .cmd-full {
     max-width: 200px;
     flex-wrap: wrap;
@@ -296,18 +309,6 @@ form.edit label {
     flex-wrap: wrap;
     padding-top: 5px;
     text-align: center;
-  }
-  .kpi {
-    height: auto !important;
-  }
-  .cmd-full .cmd-full {
-    justify-content: center;
-  }
-  .cmd.item > * {
-    padding: 10px 0;
-  }
-  .nexttime {
-    font-size: 12px;
   }
 }
 </style>
@@ -636,8 +637,8 @@ export default {
     nexttime(cmd) {
       if (!cmd.nextrun) return ' '
       const next = new Date(cmd.nextrun)
-      if (next.isToday()) return 'Today at ' + next.format('%X')
-      if (next.isTomorrow()) return 'Tomorrow at ' + next.format('%X')
+      if (next.isToday()) return 'Today ' + next.format('%X')
+      if (next.isTomorrow()) return 'Tomorrow ' + next.format('%X')
       return next.relative()
     },
     simplify(cmd) {
