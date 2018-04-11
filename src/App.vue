@@ -149,6 +149,7 @@ form.edit label {
 
 .cmd {
   position: relative;
+  max-width: 1000px;
 }
 .cmd [tt] {
   position: inherit;
@@ -194,8 +195,11 @@ form.edit label {
   width: 60px;
 }
 .cmd-full {
-  max-width: 300px;
+  flex: 1 1 auto;
   word-break: break-all;
+}
+.nexttime {
+  width: 100px;
 }
 .day {
   margin: 0 4px;
@@ -274,8 +278,36 @@ form.edit label {
   input[name='command'] {
     width: 400px;
   }
+}
+@media (max-width: 1000px) {
+  .table-list {
+    width: 100%;
+    min-width: 100%;
+  }
+  .cmd {
+    max-width: 100%;
+  }
   .cmd-full {
-    max-width: 1000px;
+    max-width: 200px;
+    flex-wrap: wrap;
+  }
+  .cmd-full div {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    padding-top: 5px;
+    text-align: center;
+  }
+  .kpi {
+    height: auto !important;
+  }
+  .cmd-full .cmd-full {
+    justify-content: center;
+  }
+  .cmd.item > * {
+    padding: 10px 0;
+  }
+  .nexttime {
+    font-size: 12px;
   }
 }
 </style>
@@ -315,12 +347,15 @@ form.edit label {
       </div>
       <div class="cmd item" row v-for="command in commands.v().sortBy(sort, desc)" :key="command.id" v-if="!search || search === command.id || new RegExp(search, 'i').test(command.command)">
         <div row center>{{ command.id.replace('C', '#') }}</div>
-        <div class="cmd-full" f1 row center left tt="Click to Edit" @click="popup_edit = command">{{ command.command }}</div>
-        <div row center><span v-if="command.nextrun">{{ nexttime(command) }}</span></div>
-        <div row center>
-          <button @click="del(command.id)" v-if="local">DEL</button>
-          <button @click="kill(command.id)" v-if="command.run">KILL</button>
-          <button @click="run(command.id)" v-if="!command.run">RUN</button>
+        <div class="cmd-full" f1 row center>
+          <div class="cmd-full" f1 row center left tt="Click to Edit" @click="popup_edit = command" v-if="mobile">{{ command.command.split(' ')[command.command.split(' ').length -1] }}</div>
+          <div class="cmd-full" f1 row center left tt="Click to Edit" @click="popup_edit = command" v-else>{{ command.command }}</div>
+          <div row center><span class="nexttime">{{ nexttime(command) }}</span></div>
+          <div row center>
+            <button @click="del(command.id)" v-if="local">DEL</button>
+            <button @click="kill(command.id)" v-if="command.run">KILL</button>
+            <button @click="run(command.id)" v-if="!command.run">RUN</button>
+          </div>
         </div>
         <div class="day" row center tt="Click to See Logs" @click="popup_logs = command">
           <div class="cells" column v-for="(cell, index) in cells(command)" :key="index">
@@ -434,7 +469,6 @@ export default {
       desc: true,
       search: null,
       search_logs: null,
-      local: location.hostname === '127.0.0.1',
       mfa_token: false,
       challenge_type: '',
       output: false,
@@ -444,6 +478,12 @@ export default {
     }
   },
   computed: {
+    mobile() {
+      return window.screen.width < 1000
+    },
+    local() {
+      return location.hostname === '127.0.0.1' && !this.mobile
+    },
     nextcmd() {
       return (
         this.commands
@@ -594,6 +634,7 @@ export default {
       confirm('Delete ' + this.commands[id].command + '?') && axios.delete(API + id).then(this.reset)
     },
     nexttime(cmd) {
+      if (!cmd.nextrun) return ' '
       const next = new Date(cmd.nextrun)
       if (next.isToday()) return 'Today at ' + next.format('%X')
       if (next.isTomorrow()) return 'Tomorrow at ' + next.format('%X')
