@@ -276,7 +276,8 @@ form.edit label {
     font-size: 16px;
   }
   [container] {
-    width: 1000px;
+    width: 1400px;
+    max-width: calc(100% - 100px);
     margin: auto;
   }
   .kpi,
@@ -285,9 +286,6 @@ form.edit label {
   }
   input[name='command'] {
     width: 400px;
-  }
-  .cmd {
-    max-width: 1000px;
   }
   .cmd.item > * {
     padding: 10px;
